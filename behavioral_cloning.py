@@ -1,11 +1,11 @@
 import glob
 import os
 import csv
-#import cv2
-import matplotlib.image as mpimg
+import cv2
 import numpy as np
-#import random
-import sklearn
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
 
 def correct_path(filepath, subfolder, imagefoldername):
 # ...
@@ -42,78 +42,21 @@ def read_image(imagefile):
 # image : RGB image data
     
     # read source file
-    #image = cv2.imread(imagefile)
-    image = mpimg.imread(imagefile)
+    image = cv2.imread(imagefile)
     
     # convert color to RGB
-    #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     return image
 
-def get_data_generator(imagefiles, measurements, bmustflip, batch_size = 32):
-# ...
-# Retrieve all input data
-# ...
-# Inputs
-# ...
-# imagefiles   : image files for training
-# measurements : related measurements for training
-# bmustflip    : boolean for 'image must be flipped'
-# ...
-# Outputs
-# ...
-# X_train : x values for training
-# y_train : y values for training
-    
-    # define constants
-    yimagerange = [70, 140]
-    
-    # loop forever so the generator never terminates
-    while 1:
-        
-        # shuffle inputs together
-        #inputs = list(zip(imagefiles, measurements))
-        #random.shuffle(inputs)
-        #imagefiles, measurements = zip(*inputs)
-        sklearn.utils.shuffle(imagefiles, measurements)
-        
-        for offset in range(0, len(imagefiles), batch_size):
-            
-            batch_imagefiles = imagefiles[offset:(offset + batch_size)]
-            batch_measurements = measurements[offset:(offset + batch_size)]
-            batch_bmustflip = measurements[offset:(offset + batch_size)]
-            
-            # loop through all images
-            batch_images = []
-            for batch_imagefile in batch_imagefiles:
-                
-                # read image
-                image = read_image(batch_imagefile)
-                
-                # crop image
-                image = image[0, :, :]
-                
-                # flip image if required
-                if 
-                batch_images.append(image)
-            
-            # calculate outputs
-            X_train = np.array(batch_images)
-            y_train = np.array(batch_measurements)
-            
-            sklearn.utils.shuffle(X_train, y_train)
-            print(X_train.shape)
-            print(y_train.shape)
-            
-            yield X_train, y_train
-
-def get_data(subfolder):
+def get_data(subfolder, bdisplay = False):
 # ...
 # Retrieve all input data
 # ...
 # Inputs
 # ...
 # subfolder : path to folder with input data
+# bdisplay  : boolean for 'display information'
 # ...
 # Outputs
 # ...
@@ -122,12 +65,16 @@ def get_data(subfolder):
 # bmustflip    : boolean for 'image must be flipped'
 
     # define constants
-    csvmask = '*.csv'
+    csvmask = 'track1*.csv'
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
     steeroffset = 0.02
     
+    # display information
+    if bdisplay:
+        print('Finding input data files...')
+        
     # initialize outputs
     imagefiles = []
     measurements = []
@@ -139,7 +86,11 @@ def get_data(subfolder):
     # loop through all csv files
     for file in files:
         
-        # separate path from file name
+        # display information
+        if bdisplay:
+            print(file)
+        
+        # determine image folder name based on csv file name
         path, name = os.path.split(file)
         prefix = name[0:(len(name) - len(drivefilename))]
         imagefoldername = prefix + imagefolderpostfix
@@ -197,24 +148,109 @@ def get_data(subfolder):
                 measurements.append([-(angle - steeroffset), throttle, brake, speed])
                 bmustflip.append(True)
     
+    # display information
+    if bdisplay:
+        print('Number of image files:', len(imagefiles), '; number of measurements:', len(measurements), '; must flip:', len(bmustflip))
+        
     return imagefiles, measurements, bmustflip
 
+def get_data_generator(imagefiles, measurements, bmustflip, batch_size):
+# ...
+# Retrieve all input data
+# ...
+# Inputs
+# ...
+# imagefiles   : image files for training
+# measurements : related measurements for training
+# bmustflip    : boolean for 'image must be flipped'
+# batch_size   : batch size which is returned for each next call
+# ...
+# Outputs via yield
+# ...
+# X_train : x values for training
+# y_train : y values for training
+    
+    # define constants
+    yimagerange = [70, 135]
+    
+    # loop forever so the generator never terminates
+    while 1:
+        
+        # shuffle inputs each time this loop restarts
+        shuffle(imagefiles, measurements, bmustflip)
+        
+        # loop through all batches
+        for offset in range(0, len(imagefiles), batch_size):
+            
+            # get batch input data
+            batch_imagefiles = imagefiles[offset:(offset + batch_size)]
+            batch_measurements = measurements[offset:(offset + batch_size)]
+            batch_bmustflip = measurements[offset:(offset + batch_size)]
+            
+            # loop through all images
+            batch_images = []
+            for batch_imagefile, batch_bmustflipit in zip(batch_imagefiles, batch_bmustflip):
+                
+                # read image
+                image = read_image(batch_imagefile)
+                
+                # crop image
+                image = image[yimagerange[0]:yimagerange[1], :, :]
+                
+                # flip image if required
+                if batch_bmustflipit:
+                    image = np.fliplr(image)
+                    
+                # add image to output
+                batch_images.append(image)
+            
+            # calculate outputs
+            X_train = np.array(batch_images)
+            y_train = np.array(batch_measurements)
+            
+            yield X_train, y_train
+
+def train_model(data_generator, datasets, batch_size, bdisplay = False):
+# ...
+# Train model
+# ...
+# Inputs
+# ...
+# data_generator : variable pointing to function that retrieves next values from data generator
+# datasets       : total number of data sets
+# batch_size     : batch size
+# bdisplay  : boolean for 'display information'
+    
+    # loop through all batches
+    for dataset in range(0, datasets, batch_size):
+        
+        # get batch data
+        X_train, y_train = next(data_generator)
+        
+        # display information
+        if bdisplay:
+            print('Training data set', dataset, 'of', datasets, ':', X_train.shape, '=>', y_train.shape)
+            plt.imshow(X_train[0])
+            plt.show()
+            
 # define constants
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
+valid_percentage = 0.1
+batch_size = 32
+bdisplay = True
 
 # commands to execute if this file is called
 if __name__ == "__main__":
     
     # retrieve input data
-    imagefiles, measurements, bmustflip = get_data(subfolder)
-    print(len(imagefiles))
-    print(len(measurements))
+    imagefiles, measurements, bmustflip = get_data(subfolder, bdisplay)
     
     # need to shuffle and split into training and validation data
-    sklearn.utils.shuffle(imagefiles, measurements, bmustflip)
-    # code to split
+    imagefiles_train, imagefiles_valid, measurements_train, measurements_valid, bmustflip_train, bmustflip_valid = train_test_split(imagefiles, measurements, bmustflip, test_size = valid_percentage)
     
-    # retrieve batch for training
-    X_train, y_train = get_data_generator(imagefiles, measurements, bmustflip, batch_size = 32)
-    print(X_train.shape)
-    print(y_train.shape)
+    # define data generator to retrieve batch for training
+    data_generator = get_data_generator(imagefiles_train, measurements_train, bmustflip_train, batch_size)
+    
+    # train model
+    #train_model(data_generator, len(imagefiles_train), batch_size, bdisplay = bdisplay)
+    train_model(data_generator, 50, batch_size, bdisplay = bdisplay)
