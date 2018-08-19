@@ -1,3 +1,4 @@
+# import packages
 import glob
 import os
 import csv
@@ -6,6 +7,10 @@ import numpy as np
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from keras.models import Sequential, Model
+from keras.layers import Flatten, Dense, Lambda
+from keras.layers.convolutional import Convolution2
+from keras.layers.pooling import MaxPooling2D
 
 def correct_path(filepath, subfolder, imagefoldername):
 # ...
@@ -69,7 +74,7 @@ def get_data(subfolder, bdisplay = False):
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
-    steeroffset = 0.02
+    steeroffset = 0.05
     
     # display information
     if bdisplay:
@@ -154,7 +159,7 @@ def get_data(subfolder, bdisplay = False):
         
     return imagefiles, measurements, bmustflip
 
-def get_data_generator(imagefiles, measurements, bmustflip, batch_size):
+def get_data_generator(imagefiles, measurements, bmustflip, batch_size, yimagerange):
 # ...
 # Retrieve all input data
 # ...
@@ -164,6 +169,7 @@ def get_data_generator(imagefiles, measurements, bmustflip, batch_size):
 # measurements : related measurements for training
 # bmustflip    : boolean for 'image must be flipped'
 # batch_size   : batch size which is returned for each next call
+# yimagerange  : range of pixels used from source images in vertical direction
 # ...
 # Outputs via yield
 # ...
@@ -210,33 +216,97 @@ def get_data_generator(imagefiles, measurements, bmustflip, batch_size):
             
             yield X_train, y_train
 
-def train_model(data_generator, datasets, batch_size, bdisplay = False):
+def train_model(train_generator, train_datasets, valid_generator, batch_size, validation_percentage, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = False):
 # ...
 # Train model
 # ...
 # Inputs
 # ...
-# data_generator : variable pointing to function that retrieves next values from data generator
-# datasets       : total number of data sets
-# batch_size     : batch size
-# bdisplay  : boolean for 'display information'
+# train_generator       : variable pointing to function that retrieves next values from training generator
+# valid_generator       : variable pointing to function that retrieves next values from validation generator
+# train_datasets        : total number of training data sets
+# batch_size            : batch size
+# validation_percentage : percentage of validation data
+# yimagerange           : range of pixels used from source images in vertical direction
+# ysize                 : source image height in pixels
+# xsize                 : source image width in pixels
+# epochs                : number of epochs
+# modelfile             : file name in which model will be saved
+# bdisplay              : boolean for 'display information'
     
+    """
     # loop through all batches
-    for dataset in range(0, datasets, batch_size):
+    for train_dataset in range(0, train_datasets, batch_size):
         
         # get batch data
-        X_train, y_train = next(data_generator)
+        X_train, y_train = next(train_generator)
         
         # display information
         if bdisplay:
-            print('Training data set', dataset, 'of', datasets, ':', X_train.shape, '=>', y_train.shape)
+            print('Training data set', train_dataset, 'of', train_datasets, ':', X_train.shape, '=>', y_train.shape)
+            print('   Angle:', '{:07.4f}'.format(y_train[0][0]), 'Throttle:', '{:07.4f}'.format(y_train[0][1]), 'Braking:', '{:07.4f}'.format(y_train[0][2]), 'Speed:', '{:07.4f}'.format(y_train[0][3]))
             plt.imshow(X_train[0])
             plt.show()
-            
+    """
+    
+    # define Keras model
+    model = Sequential()
+    
+    # define Keras input adjustments
+    model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (3, ysize, xsize)))
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape = ((ysize - yimagerange[0] - (ysize - yimagerange[1])), xsize, 3)))
+    
+    # define Keras convolutional layers
+    model.add(Convolution2D(24, 5, 5, subsample = (2, 2), activation = "relu"))
+    #model.add(MaxPooling2D())
+    model.add(Convolution2D(36, 5, 5, subsample = (2, 2), activation = "relu"))
+    #model.add(MaxPooling2D())
+    model.add(Convolution2D(48, 5, 5, subsample = (2, 2), activation = "relu"))
+    #model.add(MaxPooling2D())
+    model.add(Convolution2D(64, 3, 3, activation = "relu"))
+    #model.add(MaxPooling2D())
+    model.add(Convolution2D(64, 3, 3, activation = "relu"))
+    #model.add(MaxPooling2D())
+    
+    # define Keras dense layers
+    model.add(Flatten())
+    model.add(Dense(100))
+    model.add(Dense(50))
+    model.add(Dense(10))
+    model.add(Dense(1))
+    
+    # generate model
+    model.compile(loss = 'mse', optimizer = 'adam')
+    
+    # train model
+    #model.fit(X_train, y_train, validation_split = valid_percentage, shuffle = True, nb_epoch = epochs, verbose = 1)
+    history_object = model.fit_generator(train_generator, samples_per_epoch = len(train_samples), validation_data = validation_generator, nb_val_samples = len(validation_samples), nb_epoch = epochs, verbose = 1)
+    
+    # display information
+    if bdisplay:
+        
+        # print the keys contained in the history object
+        print(history_object.history.keys())
+        
+        # plot the training and validation loss for each epoch
+        plt.plot(history_object.history['loss'])
+        plt.plot(history_object.history['val_loss'])
+        plt.title('model mean squared error loss')
+        plt.ylabel('mean squared error loss')
+        plt.xlabel('epoch')
+        plt.legend(['training set', 'validation set'], loc='upper right')
+        plt.show()
+    
+    # save trained model
+    model.save(modelfile)
+    
 # define constants
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
-valid_percentage = 0.1
+valid_percentage = 0.2
 batch_size = 32
+yimagerange = [70, 135]
+epochs = 2
+modelfile = 'model.h5'
 bdisplay = True
 
 # commands to execute if this file is called
@@ -244,13 +314,17 @@ if __name__ == "__main__":
     
     # retrieve input data
     imagefiles, measurements, bmustflip = get_data(subfolder, bdisplay)
+    ysize = imagefiles.shape[1]
+    xsize = imagefiles.shape[2]
+    print(ysize, xsize)
     
     # need to shuffle and split into training and validation data
     imagefiles_train, imagefiles_valid, measurements_train, measurements_valid, bmustflip_train, bmustflip_valid = train_test_split(imagefiles, measurements, bmustflip, test_size = valid_percentage)
     
-    # define data generator to retrieve batch for training
-    data_generator = get_data_generator(imagefiles_train, measurements_train, bmustflip_train, batch_size)
+    # define data generators to retrieve batches for training and validation
+    train_generator = get_data_generator(imagefiles_train, measurements_train, bmustflip_train, batch_size, [0, ysize])
+    valid_generator = get_data_generator(imagefiles_valid, measurements_valid, bmustflip_valid, batch_size, [0, ysize])
     
     # train model
-    #train_model(data_generator, len(imagefiles_train), batch_size, bdisplay = bdisplay)
-    train_model(data_generator, 50, batch_size, bdisplay = bdisplay)
+    #train_model(train_generator, valid_generator, len(imagefiles_train), batch_size, validation_percentage, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay)
+    train_model(train_generator, valid_generator, 256, batch_size, validation_percentage, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay)
