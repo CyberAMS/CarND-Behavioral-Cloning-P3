@@ -7,9 +7,9 @@ import numpy as np
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from keras.models import Sequential, Model
-from keras.layers import Flatten, Dense, Lambda
-from keras.layers.convolutional import Convolution2
+from keras.models import Sequential
+from keras.layers import Cropping2D, Lambda, Flatten, Dense
+from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 
 def correct_path(filepath, subfolder, imagefoldername):
@@ -68,6 +68,8 @@ def get_data(subfolder, bdisplay = False):
 # imagefiles   : image files for training
 # measurements : related measurements for training
 # bmustflip    : boolean for 'image must be flipped'
+# ysize        : height of images
+# xsize        : width of images
 
     # define constants
     csvmask = 'track1*.csv'
@@ -120,7 +122,7 @@ def get_data(subfolder, bdisplay = False):
             speed = np.float_(line[6])
             btake = np.bool_(line[7])
             
-            # check whether data point should be considered
+            # check whether data point should be considered and then augment data set
             if btake:
                 
                 # add center image to output
@@ -153,11 +155,16 @@ def get_data(subfolder, bdisplay = False):
                 measurements.append([-(angle - steeroffset), throttle, brake, speed])
                 bmustflip.append(True)
     
+    # get size of images
+    image = cv2.imread(imagefiles[0])
+    ysize = image.shape[0]
+    xsize = image.shape[1]
+    
     # display information
     if bdisplay:
-        print('Number of image files:', len(imagefiles), '; number of measurements:', len(measurements), '; must flip:', len(bmustflip))
+        print('Number of image files:', len(imagefiles), '; number of measurements:', len(measurements), '; must flip:', len(bmustflip), '; size:', xsize, 'x', ysize)
         
-    return imagefiles, measurements, bmustflip
+    return imagefiles, measurements, bmustflip, ysize, xsize
 
 def get_data_generator(imagefiles, measurements, bmustflip, batch_size, yimagerange):
 # ...
@@ -173,11 +180,8 @@ def get_data_generator(imagefiles, measurements, bmustflip, batch_size, yimagera
 # ...
 # Outputs via yield
 # ...
-# X_train : x values for training
-# y_train : y values for training
-    
-    # define constants
-    yimagerange = [70, 135]
+# X_data : x values for training
+# y_data : y values for training
     
     # loop forever so the generator never terminates
     while 1:
@@ -211,61 +215,83 @@ def get_data_generator(imagefiles, measurements, bmustflip, batch_size, yimagera
                 batch_images.append(image)
             
             # calculate outputs
-            X_train = np.array(batch_images)
-            y_train = np.array(batch_measurements)
+            X_data = np.array(batch_images)
+            y_data = np.array(batch_measurements)
             
-            yield X_train, y_train
+            yield X_data, y_data
 
-def train_model(train_generator, train_datasets, valid_generator, batch_size, validation_percentage, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = False):
+def get_and_display_generator_data(data_generator, dataset, data_size, bdisplay):
+# ...
+# Train model
+# ...
+# Inputs
+# ...
+# data_generator : variable pointing to function that retrieves next values from data generator
+# dataset        : current number of data set
+# data_size      : total number of data sets
+# bdisplay       : boolean for 'display information'
+
+    # get batch data
+    X_data, y_data = next(data_generator)
+    
+    # display information
+    if bdisplay:
+        print('Data set', dataset, 'of', data_size, ':', X_data.shape, '=>', y_data.shape)
+        print('   Angle:', '{:07.4f}'.format(y_data[0][0]), 'Throttle:', '{:07.4f}'.format(y_data[0][1]), 'Braking:', '{:07.4f}'.format(y_data[0][2]), 'Speed:', '{:07.4f}'.format(y_data[0][3]))
+        plt.imshow(X_data[0])
+        plt.show()
+                
+def train_model(train_generator, train_size, valid_generator, valid_size, batch_size, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = False, bdebug = False):
 # ...
 # Train model
 # ...
 # Inputs
 # ...
 # train_generator       : variable pointing to function that retrieves next values from training generator
+# train_size            : total number of training data sets
 # valid_generator       : variable pointing to function that retrieves next values from validation generator
-# train_datasets        : total number of training data sets
+# valid_size            : total number of validation data sets
 # batch_size            : batch size
-# validation_percentage : percentage of validation data
 # yimagerange           : range of pixels used from source images in vertical direction
 # ysize                 : source image height in pixels
 # xsize                 : source image width in pixels
 # epochs                : number of epochs
 # modelfile             : file name in which model will be saved
 # bdisplay              : boolean for 'display information'
+# bdebug                : boolean for 'debug generator'
     
-    """
-    # loop through all batches
-    for train_dataset in range(0, train_datasets, batch_size):
+    # debug generator
+    if bdebug:
         
-        # get batch data
-        X_train, y_train = next(train_generator)
-        
-        # display information
-        if bdisplay:
-            print('Training data set', train_dataset, 'of', train_datasets, ':', X_train.shape, '=>', y_train.shape)
-            print('   Angle:', '{:07.4f}'.format(y_train[0][0]), 'Throttle:', '{:07.4f}'.format(y_train[0][1]), 'Braking:', '{:07.4f}'.format(y_train[0][2]), 'Speed:', '{:07.4f}'.format(y_train[0][3]))
-            plt.imshow(X_train[0])
-            plt.show()
-    """
-    
+        # loop through all training data
+        for train_dataset in range(0, train_size, batch_size):
+            
+            # get and display training data
+            get_and_display_generator_data(train_generator, train_dataset, train_size, bdisplay)
+            
+        # loop through all validation data
+        for valid_dataset in range(0, valid_size, batch_size):
+            
+            # get and display validation data
+            get_and_display_generator_data(valid_generator, valid_dataset, valid_size, bdisplay)
+            
     # define Keras model
     model = Sequential()
     
     # define Keras input adjustments
     model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (3, ysize, xsize)))
-    model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape = ((ysize - yimagerange[0] - (ysize - yimagerange[1])), xsize, 3)))
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5), input_shape = ((ysize - yimagerange[0] - (ysize - yimagerange[1])), xsize, 3))
     
     # define Keras convolutional layers
-    model.add(Convolution2D(24, 5, 5, subsample = (2, 2), activation = "relu"))
+    model.add(Conv2D(24, 5, 5, subsample = (2, 2), activation = "relu"))
     #model.add(MaxPooling2D())
-    model.add(Convolution2D(36, 5, 5, subsample = (2, 2), activation = "relu"))
+    model.add(Conv2D(36, 5, 5, subsample = (2, 2), activation = "relu"))
     #model.add(MaxPooling2D())
-    model.add(Convolution2D(48, 5, 5, subsample = (2, 2), activation = "relu"))
+    model.add(Conv2D(48, 5, 5, subsample = (2, 2), activation = "relu"))
     #model.add(MaxPooling2D())
-    model.add(Convolution2D(64, 3, 3, activation = "relu"))
+    model.add(Conv2D(64, 3, 3, activation = "relu"))
     #model.add(MaxPooling2D())
-    model.add(Convolution2D(64, 3, 3, activation = "relu"))
+    model.add(Conv2D(64, 3, 3, activation = "relu"))
     #model.add(MaxPooling2D())
     
     # define Keras dense layers
@@ -279,8 +305,7 @@ def train_model(train_generator, train_datasets, valid_generator, batch_size, va
     model.compile(loss = 'mse', optimizer = 'adam')
     
     # train model
-    #model.fit(X_train, y_train, validation_split = valid_percentage, shuffle = True, nb_epoch = epochs, verbose = 1)
-    history_object = model.fit_generator(train_generator, samples_per_epoch = len(train_samples), validation_data = validation_generator, nb_val_samples = len(validation_samples), nb_epoch = epochs, verbose = 1)
+    history_object = model.fit_generator(train_generator, samples_per_epoch = train_size, validation_data = valid_generator, nb_val_samples = valid_size, nb_epoch = epochs, verbose = 1)
     
     # display information
     if bdisplay:
@@ -302,29 +327,29 @@ def train_model(train_generator, train_datasets, valid_generator, batch_size, va
     
 # define constants
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
+yimagerange = [70, 135]
+max_train_size = 256
 valid_percentage = 0.2
 batch_size = 32
-yimagerange = [70, 135]
 epochs = 2
 modelfile = 'model.h5'
 bdisplay = True
+bdebug = True
 
 # commands to execute if this file is called
 if __name__ == "__main__":
     
     # retrieve input data
-    imagefiles, measurements, bmustflip = get_data(subfolder, bdisplay)
-    ysize = imagefiles.shape[1]
-    xsize = imagefiles.shape[2]
-    print(ysize, xsize)
+    imagefiles, measurements, bmustflip, ysize, xsize = get_data(subfolder, bdisplay)
     
     # need to shuffle and split into training and validation data
     imagefiles_train, imagefiles_valid, measurements_train, measurements_valid, bmustflip_train, bmustflip_valid = train_test_split(imagefiles, measurements, bmustflip, test_size = valid_percentage)
+    train_size = len(imagefiles_train)
+    valid_size = len(imagefiles_valid)
     
     # define data generators to retrieve batches for training and validation
     train_generator = get_data_generator(imagefiles_train, measurements_train, bmustflip_train, batch_size, [0, ysize])
     valid_generator = get_data_generator(imagefiles_valid, measurements_valid, bmustflip_valid, batch_size, [0, ysize])
     
     # train model
-    #train_model(train_generator, valid_generator, len(imagefiles_train), batch_size, validation_percentage, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay)
-    train_model(train_generator, valid_generator, 256, batch_size, validation_percentage, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay)
+    train_model(train_generator, np.min(train_size, max_train_size), valid_generator, valid_size, batch_size, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay, bdebug = bdebug)
