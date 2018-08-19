@@ -280,7 +280,7 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
     
     # define Keras input adjustments
     model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (3, ysize, xsize)))
-    model.add(Lambda(lambda x: (x / 255.0) - 0.5), input_shape = ((ysize - yimagerange[0] - (ysize - yimagerange[1])), xsize, 3))
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5))
     
     # define Keras convolutional layers
     model.add(Conv2D(24, 5, 5, subsample = (2, 2), activation = "relu"))
@@ -329,12 +329,13 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
 max_train_size = 256
+max_valid_size = 256
 valid_percentage = 0.2
 batch_size = 32
 epochs = 2
 modelfile = 'model.h5'
 bdisplay = True
-bdebug = True
+bdebug = False
 
 # commands to execute if this file is called
 if __name__ == "__main__":
@@ -352,4 +353,4 @@ if __name__ == "__main__":
     valid_generator = get_data_generator(imagefiles_valid, measurements_valid, bmustflip_valid, batch_size, [0, ysize])
     
     # train model
-    train_model(train_generator, np.min(train_size, max_train_size), valid_generator, valid_size, batch_size, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay, bdebug = bdebug)
+    train_model(train_generator, np.min([train_size, max_train_size]), valid_generator, np.min([valid_size, max_valid_size]), batch_size, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay, bdebug = bdebug)
