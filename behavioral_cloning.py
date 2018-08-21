@@ -199,7 +199,6 @@ def get_data_generator(imagefiles, measurements, bmustflip, batch_size, yimagera
             batch_imagefiles = imagefiles[offset:(offset + batch_size)]
             batch_measurements = [measurement[index] for measurement in measurements[offset:(offset + batch_size)] \
                                   for index in measurement_range]
-            print(batch_measurements)
             batch_bmustflip = measurements[offset:(offset + batch_size)]
             
             # loop through all images
@@ -285,7 +284,6 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
     
     # define Keras input adjustments
     model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (ysize, xsize, 3)))
-    """
     model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape = (3, (ysize - (yimagerange[0] + (ysize - yimagerange[1]))), xsize)))
     
     # define Keras convolutional layers
@@ -299,7 +297,6 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
     #model.add(MaxPooling2D())
     model.add(Conv2D(64, 3, 3, activation = "relu"))
     #model.add(MaxPooling2D())
-    """
     
     # define Keras dense layers
     model.add(Flatten())
@@ -307,11 +304,6 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
     model.add(Dense(50))
     model.add(Dense(10))
     model.add(Dense(1))
-    print(model.layers)
-    
-    X_data, y_data = next(train_generator)
-    print(X_data.shape)
-    print(y_data.shape)
     
     # generate model
     model.compile(loss = 'mse', optimizer = 'adam')
@@ -340,8 +332,8 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
 # define constants
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
-max_train_size = 256
-max_valid_size = 256
+max_train_size = 9999999999 # 256
+max_valid_size = 9999999999 # 256
 valid_percentage = 0.2
 batch_size = 32
 epochs = 2
