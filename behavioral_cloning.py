@@ -183,6 +183,9 @@ def get_data_generator(imagefiles, measurements, bmustflip, batch_size, yimagera
 # X_data : x values for training
 # y_data : y values for training
     
+    # define constants
+    measurement_range = [0] # only take the first measurement (steering angle)
+    
     # loop forever so the generator never terminates
     while 1:
         
@@ -194,7 +197,9 @@ def get_data_generator(imagefiles, measurements, bmustflip, batch_size, yimagera
             
             # get batch input data
             batch_imagefiles = imagefiles[offset:(offset + batch_size)]
-            batch_measurements = measurements[offset:(offset + batch_size)]
+            batch_measurements = [measurement[index] for measurement in measurements[offset:(offset + batch_size)] \
+                                  for index in measurement_range]
+            print(batch_measurements)
             batch_bmustflip = measurements[offset:(offset + batch_size)]
             
             # loop through all images
@@ -279,8 +284,9 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
     model = Sequential()
     
     # define Keras input adjustments
-    model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (3, ysize, xsize)))
-    model.add(Lambda(lambda x: (x / 255.0) - 0.5))
+    model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (ysize, xsize, 3)))
+    """
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape = (3, (ysize - (yimagerange[0] + (ysize - yimagerange[1]))), xsize)))
     
     # define Keras convolutional layers
     model.add(Conv2D(24, 5, 5, subsample = (2, 2), activation = "relu"))
@@ -293,6 +299,7 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
     #model.add(MaxPooling2D())
     model.add(Conv2D(64, 3, 3, activation = "relu"))
     #model.add(MaxPooling2D())
+    """
     
     # define Keras dense layers
     model.add(Flatten())
@@ -300,6 +307,11 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
     model.add(Dense(50))
     model.add(Dense(10))
     model.add(Dense(1))
+    print(model.layers)
+    
+    X_data, y_data = next(train_generator)
+    print(X_data.shape)
+    print(y_data.shape)
     
     # generate model
     model.compile(loss = 'mse', optimizer = 'adam')
