@@ -77,7 +77,7 @@ def get_data(subfolder, bdisplay = False):
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
-    steeroffset = 0.05 # 0.2
+    steeroffset = 0.2 # 0.05
     
     # display information
     if bdisplay:
@@ -273,6 +273,12 @@ def train_model(train_generator, train_size, valid_generator, valid_size, displa
 # bdisplay              : boolean for 'display information'
 # bdebug                : boolean for 'debug generator'
     
+    # display information
+    if bdisplay:
+        
+        # display number of batches
+        print('Batch size:', batch_size)
+    
     # debug generator
     if bdebug:
         
@@ -315,7 +321,7 @@ def train_model(train_generator, train_size, valid_generator, valid_size, displa
     model.compile(loss = 'mse', optimizer = 'adam')
     
     # train model
-    history_object = model.fit_generator(train_generator, samples_per_epoch = train_size, validation_data = valid_generator, nb_val_samples = valid_size, nb_epoch = epochs, verbose = 1)
+    history_object = model.fit_generator(train_generator, samples_per_epoch = np.int(train_size // batch_size), validation_data = valid_generator, nb_val_samples = np.int(valid_size // batch_size), nb_epoch = epochs, verbose = 1)
     
     # display information
     if bdisplay:
