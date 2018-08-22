@@ -323,7 +323,7 @@ def train_model(train_generator, train_size, valid_generator, valid_size, batch_
         plt.title('model mean squared error loss')
         plt.ylabel('mean squared error loss')
         plt.xlabel('epoch')
-        plt.legend(['training set', 'validation set'], loc='upper right')
+        plt.legend(['training set', 'validation set'], loc = 'upper right')
         plt.show()
     
     # save trained model
