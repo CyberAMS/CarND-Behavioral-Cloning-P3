@@ -77,7 +77,7 @@ def get_data(subfolder, bdisplay = False):
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
-    steeroffset = 0.02 # 0.2
+    steeroffset = 0.4 # 0.02 # 0.2
     
     # display information
     if bdisplay:
