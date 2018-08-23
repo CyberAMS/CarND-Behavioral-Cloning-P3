@@ -302,33 +302,39 @@ def get_and_display_generator_data(data_generator, dataset, data_size, bdisplay)
             plt.imshow(X)
             plt.show()
 
-def train_model(train_generator, train_size, valid_generator, valid_size, display_generator, display_size, batch_size, yimagerange, ysize, xsize, epochs, modelfile, modellayoutpicfile, sMP, bdisplay = False, bdebug = False):
+def train_model(itername, train_generator, train_size, valid_generator, valid_size, display_generator, display_size, batch_size, yimagerange, ysize, xsize, epochs, modelfilename, modelfileext, modellayoutpicfilename, modellayoutpicfileext, sMP, bdisplay = False, bdebug = False):
 # ...
 # Train model
 # ...
 # Inputs
 # ...
-# train_generator    : variable pointing to function that retrieves next values from training generator
-# train_size         : total number of training data sets
-# valid_generator    : variable pointing to function that retrieves next values from validation generator
-# valid_size         : total number of validation data sets
-# display_generator  : variable pointing to function that retrieves next values from display generator
-# display_size       : total number of display data sets
-# batch_size         : batch size
-# yimagerange        : range of pixels used from source images in vertical direction
-# ysize              : source image height in pixels
-# xsize              : source image width in pixels
-# epochs             : number of epochs
-# modelfile          : file name in which model will be saved
-# modellayoutpicfile : picture file in which model layout will be stored
-# sMP                : object containing model parameters that define the model layout
-# bdisplay           : boolean for 'display information'
-# bdebug             : boolean for 'debug generator'
+# itername               : name of training iteration
+# train_generator        : variable pointing to function that retrieves next values from training generator
+# train_size             : total number of training data sets
+# valid_generator        : variable pointing to function that retrieves next values from validation generator
+# valid_size             : total number of validation data sets
+# display_generator      : variable pointing to function that retrieves next values from display generator
+# display_size           : total number of display data sets
+# batch_size             : batch size
+# yimagerange            : range of pixels used from source images in vertical direction
+# ysize                  : source image height in pixels
+# xsize                  : source image width in pixels
+# epochs                 : number of epochs
+# modelfilename          : file name in which model will be saved
+# modelfileext           : file extension for file in which model will be saved
+# modellayoutpicfilename : picture file in which model layout will be stored
+# modellayoutpicfileext  : file extension for picture file in which model layout will be stored
+# sMP                    : object containing model parameters that define the model layout
+# bdisplay               : boolean for 'display information'
+# bdebug                 : boolean for 'debug generator'
     
     # display information
     if bdisplay:
         
         # display number of batches
+        print('= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =')
+        print('Configuration:', itername)
+        print('- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -')
         print('Batch size:', batch_size)
     
     # debug generator
@@ -345,7 +351,8 @@ def train_model(train_generator, train_size, valid_generator, valid_size, displa
     
     # define Keras input adjustments
     model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (ysize, xsize, 3)))
-    model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape = (3, (ysize - (yimagerange[0] + (ysize - yimagerange[1]))), xsize)))
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5, \
+                     input_shape = (3, (ysize - (yimagerange[0] + (ysize - yimagerange[1]))), xsize)))
     
     # define Keras convolutional layers
     for conv_layer in sMP.conv_layers:
@@ -360,19 +367,21 @@ def train_model(train_generator, train_size, valid_generator, valid_size, displa
         model.add(Dense(full_layer.features))
     
     # print the layout of the model
-    plot_model(model, to_file = modellayoutpicfile)
+    plot_model(model, to_file = (modellayoutpicfilename + '_' + itername + modellayoutpicfileext))
     
     # generate model
     model.compile(loss = 'mse', optimizer = 'adam')
     
     # train model
-    history_object = model.fit_generator(train_generator, samples_per_epoch = np.int(train_size // batch_size), validation_data = valid_generator, nb_val_samples = np.int(valid_size // batch_size), nb_epoch = epochs, verbose = 1)
+    history_object = model.fit_generator(train_generator, samples_per_epoch = np.int(train_size // batch_size), \
+                                         validation_data = valid_generator, \
+                                         nb_val_samples = np.int(valid_size // batch_size), nb_epoch = epochs, verbose = 1)
     
     # display information
     if bdisplay:
         
         # print the keys contained in the history object
-        print(history_object.history.keys())
+        #print(history_object.history.keys())
         
         # plot the training and validation loss for each epoch
         plt.plot(history_object.history['loss'])
@@ -384,23 +393,28 @@ def train_model(train_generator, train_size, valid_generator, valid_size, displa
         plt.show()
     
     # save trained model
-    model.save(modelfile)
+    model.save((modelfilename + '_' + itername + modelfileext))
     
 # define constants
+iternames = []
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
-max_train_size = 9999999999 # 32
-max_valid_size = 9999999999 # 32
+max_train_size = 32 # 9999999999
+max_valid_size = 32 # 9999999999
 max_display_size = 10
 valid_percentage = 0.2
 batch_size = 32 # 256
 epochs = 3
-modelfile = 'model.h5'
-modellayoutpicfile = 'model.png'
+modelfilename = 'model'
+modelfileext = '.h5'
+modellayoutpicfilename = 'model'
+modellayoutpicfileext = '.png'
 bdisplay = True
 bdebug = False
+sMPs = []
 
-# define parameters
+# define parameters for configuration 0
+iternames.append('c5_d4_wd')
 conv_layers = []
 conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
 conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
@@ -412,7 +426,44 @@ full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 50, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMP = ModelParameters(conv_layers = conv_layers, full_layers = full_layers, regularizer = regularizers.l2(0.01))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
+
+# define parameters for configuration 1
+iternames.append('c5_d4_nd')
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 48, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 1))
+full_layers.append(FullLayer(features = 50, keep_percentage = 1))
+full_layers.append(FullLayer(features = 10, keep_percentage = 1))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
+
+# define parameters for configuration 2
+iternames.append('c2_d3_wd')
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
+
+# define parameters for configuration 3
+iternames.append('c2_d3_nd')
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 1))
+full_layers.append(FullLayer(features = 10, keep_percentage = 1))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
 
 # commands to execute if this file is called
 if __name__ == "__main__":
@@ -431,5 +482,9 @@ if __name__ == "__main__":
     valid_generator = get_data_generator(imagefiles_valid, measurements_valid, bmustflip_valid, batch_size, [0, ysize])
     display_generator = get_data_generator(imagefiles, measurements, bmustflip, batch_size, [0, ysize])
     
-    # train model
-    train_model(train_generator, np.min([train_size, max_train_size]), valid_generator, np.min([valid_size, max_valid_size]), display_generator, np.min([display_size, max_display_size]), batch_size, yimagerange, ysize, xsize, epochs, modelfile, modellayoutpicfile, sMP, bdisplay = bdisplay, bdebug = bdebug)
+    # train all desired model configurations
+    for itername, sMP in zip(iternames, sMPs):
+        train_model(itername, train_generator, np.min([train_size, max_train_size]), valid_generator, \
+                    np.min([valid_size, max_valid_size]), display_generator, np.min([display_size, max_display_size]), \
+                    batch_size, yimagerange, ysize, xsize, epochs, modelfilename, modelfileext, modellayoutpicfilename, \
+                    modellayoutpicfileext, sMP, bdisplay = bdisplay, bdebug = bdebug)
