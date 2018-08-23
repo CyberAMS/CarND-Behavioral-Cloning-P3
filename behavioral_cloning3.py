@@ -93,7 +93,6 @@ def get_data(subfolder, bdisplay = False):
     for csvmask in csvmasks:
         files.append(glob.glob(os.path.join(subfolder, csvmask)))
     files = [file for sublist in files for file in sublist]
-    print(files)
     
     # loop through all csv files
     for file in files:
