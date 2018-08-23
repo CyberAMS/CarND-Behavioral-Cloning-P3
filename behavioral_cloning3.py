@@ -12,6 +12,49 @@ from keras.layers import Cropping2D, Lambda, Flatten, Dropout, Dense
 from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 from keras import regularizers
+from keras.utils import plot_model
+
+class ConvLayer:
+# ...
+# Parameters used to define the structure of a convolutional layer
+# ...
+    
+    features = 1
+    filter_size = (5, 5)
+    strides = (2, 2)
+    busepooling = False
+    
+    def __init__(self, features, filter_size, strides, busepooling):
+        self.features = features
+        self.filter_size = filter_size
+        self.strides = (1, 1) if (strides == None) else strides
+        self.busepooling = busepooling
+
+class FullLayer:
+# ...
+# Parameters used to define the structure of a full layer
+# ...
+    
+    features = 1
+    keep_percentage = 1
+    
+    def __init__(self, features, keep_percentage):
+        self.features = features
+        self.keep_percentage = keep_percentage
+
+class ModelParameters:
+# ...
+# Parameters used to define the structure of the convolutional neural network
+# ...
+    
+    conv_layers = []
+    full_layers = []
+    regularizer = None
+    
+    def __init__(self, conv_layers, full_layers, regularizer):
+        self.conv_layers = conv_layers
+        self.full_layers = full_layers
+        self.regularizer = regularizer
 
 def correct_path(filepath, subfolder, imagefoldername):
 # ...
@@ -158,6 +201,10 @@ def get_data(subfolder, bdisplay = False):
                 imagefiles.append(rightfile)
                 measurements.append([-(angle - steeroffset), throttle, brake, speed])
                 bmustflip.append(True)
+                
+                # potential augmentation with autoencoder and offset to left and right
+                # would need to adjust steering angle, too (linear increase from center to sides and
+                # extreme increase if already on the sides)
     
     # get size of images
     image = cv2.imread(imagefiles[0])
@@ -255,26 +302,28 @@ def get_and_display_generator_data(data_generator, dataset, data_size, bdisplay)
             plt.imshow(X)
             plt.show()
 
-def train_model(train_generator, train_size, valid_generator, valid_size, display_generator, display_size, batch_size, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = False, bdebug = False):
+def train_model(train_generator, train_size, valid_generator, valid_size, display_generator, display_size, batch_size, yimagerange, ysize, xsize, epochs, modelfile, modellayoutpicfile, sMP, bdisplay = False, bdebug = False):
 # ...
 # Train model
 # ...
 # Inputs
 # ...
-# train_generator       : variable pointing to function that retrieves next values from training generator
-# train_size            : total number of training data sets
-# valid_generator       : variable pointing to function that retrieves next values from validation generator
-# valid_size            : total number of validation data sets
-# display_generator     : variable pointing to function that retrieves next values from display generator
-# display_size          : total number of display data sets
-# batch_size            : batch size
-# yimagerange           : range of pixels used from source images in vertical direction
-# ysize                 : source image height in pixels
-# xsize                 : source image width in pixels
-# epochs                : number of epochs
-# modelfile             : file name in which model will be saved
-# bdisplay              : boolean for 'display information'
-# bdebug                : boolean for 'debug generator'
+# train_generator    : variable pointing to function that retrieves next values from training generator
+# train_size         : total number of training data sets
+# valid_generator    : variable pointing to function that retrieves next values from validation generator
+# valid_size         : total number of validation data sets
+# display_generator  : variable pointing to function that retrieves next values from display generator
+# display_size       : total number of display data sets
+# batch_size         : batch size
+# yimagerange        : range of pixels used from source images in vertical direction
+# ysize              : source image height in pixels
+# xsize              : source image width in pixels
+# epochs             : number of epochs
+# modelfile          : file name in which model will be saved
+# modellayoutpicfile : picture file in which model layout will be stored
+# sMP                : object containing model parameters that define the model layout
+# bdisplay           : boolean for 'display information'
+# bdebug             : boolean for 'debug generator'
     
     # display information
     if bdisplay:
@@ -299,26 +348,19 @@ def train_model(train_generator, train_size, valid_generator, valid_size, displa
     model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape = (3, (ysize - (yimagerange[0] + (ysize - yimagerange[1]))), xsize)))
     
     # define Keras convolutional layers
-    model.add(Conv2D(24, 5, 5, subsample = (2, 2), activation = "relu", kernel_regularizer = regularizers.l2(0.01)))
-    #model.add(MaxPooling2D())
-    model.add(Conv2D(36, 5, 5, subsample = (2, 2), activation = "relu", kernel_regularizer = regularizers.l2(0.01)))
-    #model.add(MaxPooling2D())
-    model.add(Conv2D(48, 5, 5, subsample = (2, 2), activation = "relu", kernel_regularizer = regularizers.l2(0.01)))
-    #model.add(MaxPooling2D())
-    model.add(Conv2D(64, 3, 3, activation = "relu", kernel_regularizer = regularizers.l2(0.01)))
-    #model.add(MaxPooling2D())
-    model.add(Conv2D(64, 3, 3, activation = "relu", kernel_regularizer = regularizers.l2(0.01)))
-    #model.add(MaxPooling2D())
+    for conv_layer in sMP.conv_layers:
+        model.add(Conv2D(conv_layer.features, conv_layer.filter_size[0], conv_layer.filter_size[1], \
+                         subsample = conv_layer.strides, activation = "relu", kernel_regularizer = sMP.regularizer))
+        if conv_layer.busepooling: model.add(MaxPooling2D())
     
     # define Keras dense layers
     model.add(Flatten())
-    model.add(Dropout(0.5))
-    model.add(Dense(100))
-    model.add(Dropout(0.5))
-    model.add(Dense(50))
-    model.add(Dropout(0.5))
-    model.add(Dense(10))
-    model.add(Dense(1))
+    for full_layer in sMP.full_layers:
+        if (full_layer.keep_percentage < 1): model.add(Dropout(full_layer.keep_percentage))
+        model.add(Dense(full_layer.features))
+    
+    # print the layout of the model
+    plot_model(model, to_file = modellayoutpicfile)
     
     # generate model
     model.compile(loss = 'mse', optimizer = 'adam')
@@ -354,8 +396,23 @@ valid_percentage = 0.2
 batch_size = 32 # 256
 epochs = 3
 modelfile = 'model.h5'
+modellayoutpicfile = 'model.png'
 bdisplay = True
 bdebug = False
+
+# define parameters
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 48, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 50, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMP = ModelParameters(conv_layers = conv_layers, full_layers = full_layers, regularizer = regularizers.l2(0.01))
 
 # commands to execute if this file is called
 if __name__ == "__main__":
@@ -375,4 +432,4 @@ if __name__ == "__main__":
     display_generator = get_data_generator(imagefiles, measurements, bmustflip, batch_size, [0, ysize])
     
     # train model
-    train_model(train_generator, np.min([train_size, max_train_size]), valid_generator, np.min([valid_size, max_valid_size]), display_generator, np.min([display_size, max_display_size]), batch_size, yimagerange, ysize, xsize, epochs, modelfile, bdisplay = bdisplay, bdebug = bdebug)
+    train_model(train_generator, np.min([train_size, max_train_size]), valid_generator, np.min([valid_size, max_valid_size]), display_generator, np.min([display_size, max_display_size]), batch_size, yimagerange, ysize, xsize, epochs, modelfile, modellayoutpicfile, sMP, bdisplay = bdisplay, bdebug = bdebug)
