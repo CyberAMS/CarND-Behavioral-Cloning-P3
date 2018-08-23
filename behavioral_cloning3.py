@@ -73,7 +73,7 @@ def get_data(subfolder, bdisplay = False):
 # xsize        : width of images
 
     # define constants
-    csvmask = 'track1*.csv'
+    csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv', 'track1_meave*.csv', 'track1_deave*.csv')
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
@@ -88,8 +88,12 @@ def get_data(subfolder, bdisplay = False):
     measurements = []
     bmustflip = []
     
-    # get path to all csv files
-    files = glob.glob(os.path.join(subfolder, csvmask))
+    # get paths to all csv files
+    files = []
+    for csvmask in csvmasks:
+        files.append(glob.glob(os.path.join(subfolder, csvmask)))
+    files = [file for sublist in files for file in sublist]
+    print(files)
     
     # loop through all csv files
     for file in files:
