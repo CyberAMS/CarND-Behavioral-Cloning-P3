@@ -116,7 +116,8 @@ def get_data(subfolder, bdisplay = False):
 # xsize        : width of images
 
     # define constants
-    csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv', 'track1_meave*.csv', 'track1_deave*.csv')
+    csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv', 'track1_meave*.csv', \
+                'track1_deave*.csv')
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
@@ -213,7 +214,8 @@ def get_data(subfolder, bdisplay = False):
     
     # display information
     if bdisplay:
-        print('Number of image files:', len(imagefiles), '; number of measurements:', len(measurements), '; must flip:', np.sum(np.array(bmustflip) == True), '; size:', xsize, 'x', ysize)
+        print('Number of image files:', len(imagefiles), '; number of measurements:', len(measurements), '; must flip:', \
+              np.sum(np.array(bmustflip) == True), '; size:', xsize, 'x', ysize)
         
     return imagefiles, measurements, bmustflip, ysize, xsize
 
@@ -296,13 +298,17 @@ def get_and_display_generator_data(data_generator, dataset, data_size, bdisplay)
         for idx, (X, y) in enumerate(zip(X_data, y_data)):
             print('Data set', dataset, 'of', data_size, 'element', idx, ':', X_data.shape, '=>', y_data.shape)
             if isinstance(y, np.ndarray):
-                print('   Angle:', '{:07.4f}'.format(y[0]) if (len(y) >= 0) else False, 'Throttle:', '{:07.4f}'.format(y[1]) if (len(y) >= 1) else False, 'Braking:', '{:07.4f}'.format([2]) if (len(y) >= 2) else False, 'Speed:', '{:07.4f}'.format([3]) if (len(y) >= 3) else False)
+                print('   Angle:', '{:07.4f}'.format(y[0]) if (len(y) >= 0) else False, 'Throttle:', '{:07.4f}'.format(y[1]) \
+                      if (len(y) >= 1) else False, 'Braking:', '{:07.4f}'.format([2]) if (len(y) >= 2) else False, 'Speed:', \
+                      '{:07.4f}'.format([3]) if (len(y) >= 3) else False)
             else:
                 print('   Angle:', '{:07.4f}'.format(y))
             plt.imshow(X)
             plt.show()
 
-def train_model(itername, train_generator, train_size, valid_generator, valid_size, display_generator, display_size, batch_size, yimagerange, ysize, xsize, epochs, modelfilename, modelfileext, modellayoutpicfilename, modellayoutpicfileext, sMP, bdisplay = False, bdebug = False):
+def train_model(itername, train_generator, train_size, valid_generator, valid_size, display_generator, display_size, \
+                batch_size, yimagerange, ysize, xsize, epochs, modelfilename, modelfileext, modellayoutpicfilename, \
+                modellayoutpicfileext, sMP, bdisplay = False, bdebug = False):
 # ...
 # Train model
 # ...
@@ -367,7 +373,8 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
         model.add(Dense(full_layer.features))
     
     # print the layout of the model
-    plot_model(model, to_file = (modellayoutpicfilename + '_' + itername + modellayoutpicfileext))
+    plot_model(model, to_file = (modellayoutpicfilename + '_' + itername + modellayoutpicfileext), show_shapes = True, \
+               show_layer_names = True)
     
     # generate model
     model.compile(loss = 'mse', optimizer = 'adam')
@@ -426,7 +433,8 @@ full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 50, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
 
 # define parameters for configuration 1
 iternames.append('c5_d4_nd')
@@ -441,7 +449,8 @@ full_layers.append(FullLayer(features = 100, keep_percentage = 1))
 full_layers.append(FullLayer(features = 50, keep_percentage = 1))
 full_layers.append(FullLayer(features = 10, keep_percentage = 1))
 full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
 
 # define parameters for configuration 2
 iternames.append('c2_d3_wd')
@@ -452,7 +461,8 @@ full_layers = []
 full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
 full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
 
 # define parameters for configuration 3
 iternames.append('c2_d3_nd')
@@ -463,7 +473,8 @@ full_layers = []
 full_layers.append(FullLayer(features = 100, keep_percentage = 1))
 full_layers.append(FullLayer(features = 10, keep_percentage = 1))
 full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), regularizer = regularizers.l2(0.01)))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
 
 # commands to execute if this file is called
 if __name__ == "__main__":
