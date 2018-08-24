@@ -444,11 +444,11 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
 iternames = []
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
-max_train_size = 9999999999 # 32
-max_valid_size = 9999999999 # 32
+max_train_size = 9999999999 # 32 # 256
+max_valid_size = 9999999999 # 32 # 256
 max_display_size = 10
 valid_percentage = 0.2
-steeroffset = 0.05 # 0.4 # 0.2
+steeroffset = 0.2 # 0.4 # 0.05
 batch_size = 32 # 256
 epochs = 3
 modelfilename = 'model'
