@@ -98,14 +98,15 @@ def read_image(imagefile):
     
     return image
 
-def get_data(subfolder, bdisplay = False):
+def get_data(subfolder, steeroffset, bdisplay = False):
 # ...
 # Retrieve all input data
 # ...
 # Inputs
 # ...
-# subfolder : path to folder with input data
-# bdisplay  : boolean for 'display information'
+# subfolder   : path to folder with input data
+# steeroffset : steering offset for left and right images
+# bdisplay    : boolean for 'display information'
 # ...
 # Outputs
 # ...
@@ -119,10 +120,10 @@ def get_data(subfolder, bdisplay = False):
     # define constants
     csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv', 'track1_meave*.csv', \
                 'track1_deave*.csv')
+    #csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv')
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
-    steeroffset = 0.4 # 0.02 # 0.2
     aeoffset = steeroffset
     
     # display information
@@ -411,6 +412,7 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
     # print the layout of the model
     plot_model(model, to_file = (modellayoutpicfilename + '_' + itername + modellayoutpicfileext), show_shapes = True, \
                show_layer_names = True)
+    model.summary()
     
     # generate model
     model.compile(loss = 'mse', optimizer = 'adam')
@@ -442,10 +444,11 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
 iternames = []
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
-max_train_size = 32 # 9999999999
-max_valid_size = 32 # 9999999999
+max_train_size = 9999999999 # 32
+max_valid_size = 9999999999 # 32
 max_display_size = 10
 valid_percentage = 0.2
+steeroffset = 0.4 # 0.02 # 0.2
 batch_size = 32 # 256
 epochs = 3
 modelfilename = 'model'
@@ -516,7 +519,7 @@ sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full
 if __name__ == "__main__":
     
     # retrieve input data
-    imagefiles, measurements, bmustflip, bmustautoencode, ysize, xsize = get_data(subfolder, bdisplay)
+    imagefiles, measurements, bmustflip, bmustautoencode, ysize, xsize = get_data(subfolder, steeroffset, bdisplay)
     
     # create auto-encoder if necessary
     auto_encoder_model = None # auto_encoder(imagefiles, bmustflip, ysize, xsize)
