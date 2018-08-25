@@ -395,7 +395,7 @@ Non-trainable params: 0
 _________________________________________________________________
 ```
 
-![alt text][image7]
+![alt text][image9]
 
 ```python
 def train_model(itername, train_generator, train_size, valid_generator, valid_size, display_generator, display_size, \
