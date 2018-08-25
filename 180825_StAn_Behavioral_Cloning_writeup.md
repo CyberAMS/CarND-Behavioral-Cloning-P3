@@ -91,9 +91,14 @@ We need to train the model to steer away from the track boundary if the car gets
 
 As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events.
 
-| Row number | Column D | Column E | Column F | Column G | Column H | Column I | Column J | Column K | Column L | Column M |
-|------------|----------|----------|----------|----------|----------|----------|----------|----------|----------|----------|
-| 11 | \<steering angle\> | \<throttle\> | \<braking\> | \<speed\> | | =IF(OR(AND(D11>=AVERAGE(D6:D10),D11<0),AND(D11<=AVERAGE(D6:D10),D11>0)),1,0) | =IF(I11=0,0,J12+I11) | =IF(J11=0,0,J11/3) | =IF(K11=0,0,IF(AND(K10=0,K11>0),K11,L10-1)) | =IF(L11>=1,1,0) |
+| Row number | Column D | Column E | Column F | Column G |
+|------------|----------|----------|----------|----------|
+| 11 | \<steering angle\> | \<throttle\> | \<braking\> | \<speed\> |
+
+
+| Row number | Column I | Column J | Column K | Column L | Column M |
+|------------|----------|----------|----------|----------|----------|
+| 11 | =IF(OR(AND(D11>=AVERAGE(D6:D10),D11<0),AND(D11<=AVERAGE(D6:D10),D11>0)),1,0) | =IF(I11=0,0,J12+I11) | =IF(J11=0,0,J11/3) | =IF(K11=0,0,IF(AND(K10=0,K11>0),K11,L10-1)) | =IF(L11>=1,1,0) |
 
 ### 3. Augmentation of behavioral training data
 
