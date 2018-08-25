@@ -118,9 +118,8 @@ def get_data(subfolder, steeroffset, bdisplay = False):
 # xsize           : width of images
 
     # define constants
-    #csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv', 'track1_meave*.csv', \
-    #            'track1_deave*.csv')
-    csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv')
+    csvmasks = ('track1_center*.csv', 'track1_counter*.csv', 'track1_weave*.csv', 'track1_ceave*.csv', 'track1_meave*.csv', \
+                'track1_deave*.csv')
     delimiter = ','
     drivefilename = '_driving_log.csv'
     imagefolderpostfix = '_IMG'
@@ -444,11 +443,11 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
 iternames = []
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
-max_train_size = 9999999999 # 32 # 256
-max_valid_size = 9999999999 # 32 # 256
+max_train_size = 9999999999 # 256
+max_valid_size = 9999999999 # 256
 max_display_size = 10
 valid_percentage = 0.2
-steeroffset = 0.2 # 0.4 # 0.05
+steeroffset = 0.05 # 0.2
 batch_size = 32 # 256
 epochs = 3
 modelfilename = 'model'
@@ -476,44 +475,44 @@ sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full
                             regularizer = regularizers.l2(0.01)))
 
 # define parameters for configuration 1
-iternames.append('c5_d4_nd')
-conv_layers = []
-conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
-conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
-conv_layers.append(ConvLayer(features = 48, filter_size = (5, 5), strides = (2, 2), busepooling = False))
-conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
-conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
-full_layers = []
-full_layers.append(FullLayer(features = 100, keep_percentage = 1))
-full_layers.append(FullLayer(features = 50, keep_percentage = 1))
-full_layers.append(FullLayer(features = 10, keep_percentage = 1))
-full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
-                            regularizer = regularizers.l2(0.01)))
+#iternames.append('c5_d4_nd')
+#conv_layers = []
+#conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+#conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+#conv_layers.append(ConvLayer(features = 48, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+#conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+#conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+#full_layers = []
+#full_layers.append(FullLayer(features = 100, keep_percentage = 1))
+#full_layers.append(FullLayer(features = 50, keep_percentage = 1))
+#full_layers.append(FullLayer(features = 10, keep_percentage = 1))
+#full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+#sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+#                            regularizer = regularizers.l2(0.01)))
 
 # define parameters for configuration 2
-iternames.append('c2_d3_wd')
-conv_layers = []
-conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
-conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
-full_layers = []
-full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
-full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
-full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
-                            regularizer = regularizers.l2(0.01)))
+#iternames.append('c2_d3_wd')
+#conv_layers = []
+#conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+#conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+#full_layers = []
+#full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
+#full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
+#full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+#sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+#                            regularizer = regularizers.l2(0.01)))
 
 # define parameters for configuration 3
-iternames.append('c2_d3_nd')
-conv_layers = []
-conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
-conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
-full_layers = []
-full_layers.append(FullLayer(features = 100, keep_percentage = 1))
-full_layers.append(FullLayer(features = 10, keep_percentage = 1))
-full_layers.append(FullLayer(features = 1, keep_percentage = 1))
-sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
-                            regularizer = regularizers.l2(0.01)))
+#iternames.append('c2_d3_nd')
+#conv_layers = []
+#conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+#conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+#full_layers = []
+#full_layers.append(FullLayer(features = 100, keep_percentage = 1))
+#full_layers.append(FullLayer(features = 10, keep_percentage = 1))
+#full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+#sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+#                            regularizer = regularizers.l2(0.01)))
 
 # commands to execute if this file is called
 if __name__ == "__main__":
