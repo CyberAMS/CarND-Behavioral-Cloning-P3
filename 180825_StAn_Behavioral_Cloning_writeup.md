@@ -10,18 +10,23 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
 
 ## Content
 
-1. Data set preparation
-    1. Loading the existing data
-    1. Visualization of the data
-1. Convolutional neural network architecture
-    1. Model definition
-    1. Hyper parameter selection and training
-    1. Test of model performance after training
-1. Predictions with the trained model
-    1. Test images from the web
-    1. Exploring the inside of the model
-    1. Fun with unknown traffic signs
-    1. Searching within larger pictures
+1. Setting up the simulator and training environment
+    1. Data sources
+    1. Hardware considerations
+1. Capturing the behavioral training data
+    1. Overall strategy
+    1. Pre-processing of recovery data
+    1. Augmentation of behavioral training data
+1. Defining the model training pipeline using generators
+    1. Generator creation
+    1. Flexible model definition
+1. Selecting the model architecture and hyperparameters
+    1. Basic structure of the model
+    1. Considered model variations
+    1. Hyperparameter tuning
+1. Evaluating the model bahavior
+    1. What does underfitting and overfitting mean in this example?
+    1. Which model architecture and what parameters worked best?
 1. Discussion
 
 [//]: # (Image References)
