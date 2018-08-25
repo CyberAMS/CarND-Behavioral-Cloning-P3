@@ -31,9 +31,12 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
 
 [//]: # (Image References)
 
-[image1]: docu_images/01_01_left_2018_08_18_06_11_22_467.jpg {: width="200px"}
-[image2]: docu_images/01_02_center_2018_08_18_06_11_22_467.jpg {: width="200px"}
-[image3]: docu_images/01_03_right_2018_08_18_06_11_22_467.jpg {: width="200px"}
+[image1]: docu_images/01_01_left_2018_08_18_06_11_22_467.jpg
+{: width="200px"}
+[image2]: docu_images/01_02_center_2018_08_18_06_11_22_467.jpg
+{: width="200px"}
+[image3]: docu_images/01_03_right_2018_08_18_06_11_22_467.jpg
+{: width="200px"}
 
 ---
 
