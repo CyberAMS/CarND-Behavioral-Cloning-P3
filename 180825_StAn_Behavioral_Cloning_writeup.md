@@ -34,6 +34,11 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
 [image1]: docu_images/01_01_left_2018_08_18_06_11_22_467.jpg
 [image2]: docu_images/01_02_center_2018_08_18_06_11_22_467.jpg
 [image3]: docu_images/01_03_right_2018_08_18_06_11_22_467.jpg
+[image4]: docu_images/01_02_center_2018_08_18_06_11_22_467_cropped.jpg
+[image5]: docu_images/02_01_center_2018_08_18_06_36_35_877.jpg
+[image6]: docu_images/02_02_center_2018_08_18_06_36_37_839.jpg
+[image7]: docu_images/02_03_center_2018_08_18_06_36_39_145.jpg
+[image8]: docu_images/01_02_center_2018_08_18_06_11_22_467_flipped.jpg
 
 ---
 
@@ -74,8 +79,6 @@ The goal of this project is to have a car drive in the center of the provided tr
 
 ![alt text][image1]![alt text][image2]![alt text][image3]
 
-![](docu_images/01_01_left_2018_08_18_06_11_22_467.jpg =100x)
-
 ```
 left view: steering_angle = -0.03759398 + steeroffset
 center view: steering_angle = -0.03759398
@@ -85,16 +88,25 @@ braking = 0
 speed = 30.19014
 ```
 
+The algorithm should focus on the road itself and not on objects in the environment. The basic strategy does not include to initiate specific driving actions when e.g. a specific tree is seen on the side of the road. Therefore, all the images will be cropped at the top and bottom as shown in the following.
+
+![alt text][image2]![alt text][image4]
+
 ### 2. Pre-processing of recovery data
 
 Although the center line training includes center line driving and a soft version for recovery, the car will eventually drift away from the center line due to either varying initial conditions, changing environments or prediction errors. Therefore, a stronger version for recover is needed when the car gets close to the boundaries of the driveable track.
 
 We need to train the model to steer away from the track boundary if the car gets too close to it. We can record the necessary steering angle based on the behavior of a real driver by driving on the track and continuously weaving from left to right. Then we pre-process this recovery data to only consider images that steer the car away from the boundary. We don't want to train the model to steer towards the track boundary. We also don't want to train the model to cross over the center line with a steering angle that moves the car away from the center line like we do during the weaving events.
 
-As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events. A valid recovery situation is determined as being part of the first third of an event when the steering wheel clearly changes from left to right steering or the other way round. The second third would be considered crossing the center line and the last third would be considered steering towards the closest boundary.
+As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events. A valid recovery situation is determined as being part of the first third of an event when the steering wheel clearly changes from left to right steering or the other way round. The second third would be considered crossing the center line and the last third would be considered steering towards the closest boundary. Here are examples for first, second and last third images of a single event as decribed before along with their steering angles.
 
-![alt text][image1]![alt text][image2]![alt text][image3]
+![alt text][image5]![alt text][image6]![alt text][image7]
 
+```
+first third: steering_angle = 0.2406015
+second third: steering_angle = 0.2330827
+last third: steering_angle = 0.2030075
+```
 
 The following table shows the columns of the *\*.csv* file and the values that they contain.
 
@@ -108,11 +120,48 @@ The next table shows the formulas I used to mark the valid recovery situations s
 |------------|----------|----------|----------|----------|----------|
 | 6 | =IF(OR(AND(D6>=AVERAGE(D1:D5),D6<0),AND(D6<=AVERAGE(D1:D5),D6>0)),1,0) | =IF(I6=0,0,J7+I6) | =IF(J6=0,0,J6/3) | =IF(K6=0,0,IF(AND(K5=0,K6>0),K6,L5-1)) | =IF(L6>=1,1,0) |
 
-Columns H to L are deleted before exporting the *Microsoft Excel* file to a *\*.csv'* file. Column M stays and is read as variable `btake` for each image.
+Columns H to L are deleted before exporting the *Microsoft Excel* file to a *\*.csv'* file. Column M stays and is read as variable `btake` for each center, left and right view image.
 
 ### 3. Augmentation of behavioral training data
 
-To further augment the training data I also drove the track in the opposite direction and applied all the pre-processing on this data as described in the section before.
+To further augment the training data I also drove the track in the opposite direction - using center line driving and weaving.
+
+Each image can be used as is and horizontally flipped. The sign of the steering angle of the flipped image must also be flipped to maintain a valid training data set. Here is an example of a original and flipped image and their steering angles.
+
+![alt text][image2]![alt text][image8]
+
+```
+original center view: steering_angle = -0.03759398
+flipped center view: steering_angle = 0.03759398
+```
+
+With the before mentioned training data the car tends to either stay in the center, drift to the boundaries or recover hard from the boundaries. This can be problematic when the car drives faster. Therefore, an additional medium recovery dataset was recorded in both directions by weaving around the center line. The same pre-processing was applied as decribed in the section before.
+
+A further step would be to shift the image left and right, adjust the steering angle accordingly to encourage center driving  and regenerate the sides of the image using an auto-encoder that has been trained on the complete training dataset. This has not been implemented yet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
