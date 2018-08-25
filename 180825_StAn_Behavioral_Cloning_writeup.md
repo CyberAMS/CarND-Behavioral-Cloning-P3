@@ -39,6 +39,7 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
 [image6]: docu_images/02_02_center_2018_08_18_06_36_37_839.jpg
 [image7]: docu_images/02_03_center_2018_08_18_06_36_39_145.jpg
 [image8]: docu_images/01_02_center_2018_08_18_06_11_22_467_flipped.jpg
+[image9]: docu_images/03_01_model_c5_d4_wd.png
 
 ---
 
@@ -61,11 +62,11 @@ In order to use the Keras `keras.utils.plot_model` function I also had to manual
 
 A Windows executable for the [Udacity Self-Driving Car Simulator](https://github.com/udacity/self-driving-car-sim) can be found [here](https://d17h27t6h515a5.cloudfront.net/topher/2017/February/58983318_beta-simulator-windows/beta-simulator-windows.zip). In the following sections I will refer to this simply as *simulator*.
 
-In order to run the *simulator* in conjunction with a provided `drive.py` python script in *Autonomous Mode*, I also needed to manually install the `socketio` package in the `tensorflow_GPU` environment.
+In order to run the *simulator* in conjunction with a provided `drive.py` Python script in *Autonomous Mode*, I also needed to manually install the `socketio` package in the `tensorflow_GPU` environment.
 
 ### 2. Hardware considerations
 
-I strongly recommend using a GPU for running the *simulator* in conjunction with the `drive.py` python script in *Autonomous Mode*. I am using an *NVIDIA GeForce GTX 1060 6 GB* graphics card for this. If I run the *simulator* without a GPU on an *Intel i7* platform with the fastest low resolution settings, I will experience response time issues between the *simulator* and the python `drive.py` script. The python `drive.py` script itself does not require a GPU.
+I strongly recommend using a GPU for running the *simulator* in conjunction with the `drive.py` Python script in *Autonomous Mode*. I am using an *NVIDIA GeForce GTX 1060 6 GB* graphics card for this. If I run the *simulator* without a GPU on an *Intel i7* platform with the fastest low resolution settings, I will experience response time issues between the *simulator* and the Python `drive.py` script. The Python `drive.py` script itself does not require a GPU.
 
 In order to read images quickly from the hard disk during training, I highly recommend to use a fast *M.2 Solid-State Drive*. Compared to running it on a fast network attached storage this sped up the training process from many hours to a few minutes.
 
@@ -139,7 +140,7 @@ With the before mentioned training data the car tends to either stay in the cent
 
 A further step would be to shift the image left and right, adjust the steering angle accordingly to encourage center driving  and regenerate the sides of the image using an auto-encoder that has been trained on the complete training dataset. This has not been implemented yet.
 
-The total number of training datasets is shown in the following table. The columns contain the numbers of center, left and right view images in original and flipped state. The rows contain the numbers for the individual recordings of track `track1`. Each loop on `track1` needed to be split into 2 separate recordings, because recording the full loop at once sometimes led to an error. The center line driving is recorded as `center` and `counter` for the opposite direction. The strong recovery weaving is recorded as `weave` and `ceave` for the opposite direction. The medium recovery weaving is recorded as `meave` and `deave` for the opposite direction. Although many invalid images are ignored during the recovery weaving recordings, the total number is still high, because these loops are driven at much slower speeds. 
+The total number of recorded training datasets is shown in the following table. The columns contain the numbers of center, left and right view images in original and flipped state. The rows contain the numbers for the individual recordings of track `track1`. Each loop on `track1` needed to be split into 2 separate recordings, because recording the full loop at once sometimes led to an error. The center line driving is recorded as `center` and `counter` for the opposite direction. The strong recovery weaving is recorded as `weave` and `ceave` for the opposite direction. The medium recovery weaving is recorded as `meave` and `deave` for the opposite direction. Although many invalid images are ignored during the recovery weaving recordings, the total number is still high, because these loops are driven at much slower speeds. 
 
 ```
 Number of image files: 88020
@@ -159,252 +160,343 @@ track1_deave1       738            738   738          738    738           738
 track1_deave2       966            966   966          966    966           966
 ```
 
+## 3. Defining the model training pipeline using generators
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-I loaded the provided traffic signs data set and used basic Python operations to get an overview of the content:
-
-```
-Number of training examples = 34799
-Number of validation examples = 4410
-Number of testing examples = 12630
-Image data shape = (32, 32, 3)
-Number of classes = 43
-```
-
-The following diagram shows the amount of training, validation and testing images per traffic sign label in the provided data set.
-
-![alt text][image39]
-
-The numerics of neural networks work best if the mean of the input data is zero. I used the following equations to normalize all input data to be between -1 and 1.
+I developed a very flexible model setup and training pipeline that uses generators for effective data handling. With this I can try different model configurations by simply varying parameters. The complete pipeline is based on the following Python packages, functions and objects. The example code sections that are listed below don't require all of them.
 
 ```python
-# normalize input data
-X_train_norm = np.asarray(((X_train / 127.5) - 1), np.float32)
-X_valid_norm = np.asarray(((X_valid / 127.5) - 1), np.float32)
-X_test_norm = np.asarray(((X_test / 127.5) - 1), np.float32)
+# import packages
+import glob
+import os
+import csv
+import cv2
+import numpy as np
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from keras.models import Sequential
+from keras.layers import Cropping2D, Lambda, Flatten, Dropout, Dense
+from keras.layers.convolutional import Conv2D
+from keras.layers.pooling import MaxPooling2D
+from keras import regularizers
+from keras.utils import plot_model
+import pandas as pd
 ```
 
-As the color of traffic signs is used very intentionally to cluster signs by their importance, I decided that my detection algorithm should not be based on gray scale images only. Therefore, I left the color channel in the input data.
+### 1. Generator creation
 
-I did not augment the training data set by generating additional input using transformations. This is a potential future improvement.
+The training datasets are determined by the function `get_data`. This function returns 3 lists: `imagefiles` contains all training image file names, `measurements` contains all measurements for the training images and `bmustflip` contains the info whether or not the image must be flipped. It also returns the size of the training images as `ysize` for the height in pixels and `xsize` for the width in pixels.
 
-### 2. Visualization of the data
+The actual content of the image files is loaded and pre-processed with the `get_data_generator` function. It loops infinitely over the dataset and shuffles it at the beginning before going through it again and again. The output `X_data` contains as many images as defined by `batch_size`. The output `y_data` contains the measurements for these images (only the steering angle in this example).
 
-In order to plot a set of traffic sign images with labels I created the function `plot_traffic_signs`. I used this function to understand the picture content by looking at the training dataset in the following ways.
+The parameter `valid_percentage` defines how much of the dataset is used for validation leaving the rest for training. In this example 20 percent of the complete dataset is reservered for validation.
 
-* 30 random images
+Separate generators are created for training (`train_generator`), validation (`valid_generator`) and displaying  (`display_generator`) images. The `display_generator` is used to loop through all images for visualization only.
 
-![alt text][image1]
+```python
+def get_data_generator(imagefiles, measurements, bmustflip, batch_size):
+# ...
+# Retrieve all input data
+# ...
+# Inputs
+# ...
+# imagefiles   : image files for training
+# measurements : related measurements for training
+# bmustflip    : boolean for 'image must be flipped'
+# batch_size   : batch size which is returned for each next call
+# ...
+# Outputs via yield
+# ...
+# X_data : x values for training
+# y_data : y values for training
+    
+    # define constants
+    measurement_range = [0] # only take the first measurement (steering angle)
+    
+    # loop forever so the generator never terminates
+    while 1:
+        
+        # shuffle inputs each time this loop restarts
+        shuffle(imagefiles, measurements, bmustflip)
+        
+        # loop through all batches
+        for offset in range(0, len(imagefiles), batch_size):
+            
+            # get batch input data
+            batch_imagefiles = imagefiles[offset:(offset + batch_size)]
+            batch_measurements = [measurement[index] for measurement in measurements[offset:(offset + batch_size)] \
+                                  for index in measurement_range]
+            batch_bmustflip = bmustflip[offset:(offset + batch_size)]
+            batch_bmustautoencode = bmustautoencode[offset:(offset + batch_size)]
+            
+            # loop through all images
+            batch_images = []
+            for batch_imagefile, batch_bmustflipit in zip(batch_imagefiles, batch_bmustflip):
+                
+                # read image
+                image = read_image(batch_imagefile)
+                
+                # flip image if required
+                if batch_bmustflipit:
+                    image = np.fliplr(image)
+                    
+                # add image to output
+                batch_images.append(image)
+            
+            # calculate outputs
+            X_data = np.array(batch_images)
+            y_data = np.array(batch_measurements)
+            
+            yield X_data, y_data
 
-* 30 random images of the same random label
-
-![alt text][image2]
-
-* A very high contrast image for each label (selected by looking for the highest contrast in the center of the image)
-
-![alt text][image3]
-
-* The average image for each label (calculated by averaging the individual color channels of all images with the same label)
-
-![alt text][image4]
-
-## 2. Convolutional neural network architecture
-
-### 1. Model definition
-
-I started by adapting the `LeNet` example to take color images as input.
-
-My first intention was to create a very flexible set of functions that defines a typical type of convolutional neural network based on a few input parameters for the graph layout. Unfortunately, I ran into the issue that I couldn't get the same result when choosing the parameters to represent the simple `LeNet` example. My attempts are documented in the functions `LeNet_adjusted_method` and `LeNet_adjusted_inlinemethod`. I suspect that the way Python transfers variables between functions and how I implemented this leads to missing links in the Tensorflow graph during execution.
-
-I reverted back to defining all Tensorflow variables in a single function `LeNet_adjusted3`. The high level structure of the convolutional neural network is shown below as generated by this function.
-
-```
-Convolutional layer   1 : [32, 32] input dimension with depth 3 and [28, 28] output dimensions with depth 18
-Convolutional layer   2 : [28, 28] input dimension with depth 18 and [20, 20] output dimensions with depth 54
-Pooling layer         2 : [20, 20] input dimension with depth 54 and [10, 10] output dimensions with depth 54
-Convolutional layer   3 : [10, 10] input dimension with depth 54 and [6, 6] output dimensions with depth 128
-Fully connected layer 1 : 4608 input dimensions and 800 output dimensions
-Fully connected layer 2 : 800 input dimensions and 84 output dimensions
-Fully connected layer 3 : 84 input dimensions and 43 output dimensions
-```
-
-I designed the first convolutional layer with a filter size of 5 to detect 18 features instead of 6 like `LeNet`, because I am using 3 color channels in the input data. I intentionally skipped pooling in the first layer to keep as much detail as possible.
-
-The second convolutional layer uses a larger filter size of 9 to detect larger features in the picture. I decided to triple the number of possible features when combining smaller features. To keep the network reasonably small, the second layer uses max pooling with a stride of 2.
-
-The third convolutional layer again uses a filter size of 5 and transforms most of the remaining image structure into a total of 128 features. No pooling is used in the third layer as the size of the network is reasonably small.
-
-The following three fully connected layers transform the features into class probabilities by continuously reducing the dimensions from 4608 to 800 to 84 and finally 43 - one class for each traffic sign label.
-
-Each layer of the convolutional neural network `LeNet_adjusted3` uses *RELU* units followed by *dropout* except the last fully connected layer.
-
-The model pipeline uses the `AdamOptimizer` from Tensorflow for training. The loss function is based on `reduce_mean` from Tensorflow using `softmax_cross_entropy_with_logits`. To further avoid overfitting, the weight matrices of the first and second convolutional layer get regularized using `l2_loss`.
-
-The model accuracy is evaluated by calculating the average difference between the predicted labels and the one hot encoded input labels.
-
-### 2. Hyper parameter selection and training
-
-All layers of the model use random states as initial values with a mean of zero and standard deviation of 0.1.
-
-My starting point for the hyperparameter selection is shown in the below code section. The variable `epochs` defines the number of training epochs. The `batch_size` defines how many inputs are used between every update of the internal parameters. I selected the learning rate `rate` smaller than the standard `AdamsOptimizer` setting expecting a smoother progression. All layers with *dropout* kept 50 percent of their connections as defined by `keep_prob`. The parameter `beta` is used as factor during regularization of the convolutional weights in the loss function.
-
-```
 # define constants
-epochs = 20
-batch_size = 256
-rate = 0.0001
-keep_prob = 0.5
-beta = 0.2
+subfolder = '../../GD_GitHubData/behavioral-cloning-data'
+valid_percentage = 0.2
+steeroffset = 0.05
+batch_size = 32
+bdisplay = True
+
+# retrieve input data
+imagefiles, measurements, bmustflip, ysize, xsize = get_data(subfolder, steeroffset, bdisplay)
+
+# need to shuffle and split into training and validation data
+imagefiles_train, imagefiles_valid, measurements_train, measurements_valid, bmustflip_train, bmustflip_valid, = train_test_split(imagefiles, measurements, bmustflip, test_size = valid_percentage)
+train_size = len(imagefiles_train)
+valid_size = len(imagefiles_valid)
+display_size = len(imagefiles)
+
+# define data generators to retrieve batches for training and validation
+train_generator = get_data_generator(imagefiles_train, measurements_train, bmustflip_train, batch_size, [0, ysize])
+valid_generator = get_data_generator(imagefiles_valid, measurements_valid, bmustflip_valid, batch_size, [0, ysize])
+display_generator = get_data_generator(imagefiles, measurements, bmustflip, batch_size, [0, ysize])
 ```
 
-The first thing I realized was that the training rate `rate` was selected too small. The model had problems leaving the initialization state. So I boldly moved to a value of 0.01 which led to a similar problem. I finally realized that values between 0.0005 and 0.001 gave the best training result. That's why I settled on a value slightly smaller than the default `AdamsOptimizer` setting of 0.001.
+### 2. Flexible model definition
 
-In the next step I tried to understand the relationship between the number of epochs `epochs` and the selected batch size `batch_size`. The model trained very well with batch sizes between 32 and 256 and needed between 20 and 50 epochs to settle on a validation accuracy above 93 percent. As expected the smaller the batch size the less epochs were needed. I did realize though that the model performed better on random pictures from the web if I used larger batch sizes, probably because the model is considering a wider variety of images before making any adjustments to the internal model parameters. For example, if the batch size is smaller than the number of different traffic sign classes, the model tries to learn a subset of traffic signs during a single batch instead of considering a wider variety. With more and more epochs this effect is of lesser importance.
+The model can be defined as sequence of convolutional layers followed by a sequence of fully connected layers. In order to define the layers the following classes have been defined:
 
-The *dropout* parameter `keep_prob` applies to all layers except the last one. A value of 0.5 did not allow to reach a validation accuracy significantly above 90 percent. Instead of removing the *dropout* from some layers I decided to pick a smaller dropout percentage. Selecting larger values for the regularization parameter `beta` made it also difficult to reach a validation accuracy significantly above 90 percent. Hence, I decided to only apply a little regularization to the model.
+1. `ConvLayer` for a single convolutional layer
+1. `FullLayer` for a single fully connected layer
+1. `ModelParameters` for the model itself
 
-I finally settled on the following hyperparameters to train the model which I used in the following sections.
+A convolutional layer is defined by the number of features (`features`), the filter size (`filter_size`), the number of strides in each dimension (`strides`) as well as whether or not *max pooling* is used (`busepooling`).
 
+A fully connected layer is defined by the number of features (`features`) and the percentage of connections that should be kept (`keep_percentage`). If `keep_percentage` is less than 1, a *dropout* layer is added.
+
+The model takes a list of convolutional layers (`conv_layers`: list of objects of class `ConvLayer`), fully connected layers (`full_layers`: list of objects of class `FullLayer`) and a `regularizer` object as inputs. The `regularizer` can either be `None` or a `keras.regularizers` object. The `regularizer` is applied to the kernel weights of each convolutional layer.
+
+```python
+class ConvLayer:
+# ...
+# Parameters used to define the structure of a convolutional layer
+# ...
+    
+    features = 1
+    filter_size = (5, 5)
+    strides = (2, 2)
+    busepooling = False
+    
+    def __init__(self, features, filter_size, strides, busepooling):
+        self.features = features
+        self.filter_size = filter_size
+        self.strides = (1, 1) if (strides == None) else strides
+        self.busepooling = busepooling
+
+class FullLayer:
+# ...
+# Parameters used to define the structure of a full layer
+# ...
+    
+    features = 1
+    keep_percentage = 1
+    
+    def __init__(self, features, keep_percentage):
+        self.features = features
+        self.keep_percentage = keep_percentage
+
+class ModelParameters:
+# ...
+# Parameters used to define the structure of the convolutional neural network
+# ...
+    
+    conv_layers = []
+    full_layers = []
+    regularizer = None
+    
+    def __init__(self, conv_layers, full_layers, regularizer):
+        self.conv_layers = conv_layers
+        self.full_layers = full_layers
+        self.regularizer = regularizer
 ```
+
+The following parameters define a model with 5 convolutional layers and 4 fully connected layers that was suggested by the Udacity Self-Driving Car Engineer class. The 5 convolutional layers work well with an image of the size 320x65 pixels. The 4 fully connected layers are capable of reducing 2112 features to a single steering angle as output. The model size is large enough to accomodate L2 regularization in the convolutional layers and 50 percent dropout in the first 3 fully connected layers.
+
+```python
 # define constants
-epochs = 50
-batch_size = 128
-rate = 0.0005
-keep_prob = 0.7
-beta = 0.1
+iternames = []
+sMPs = []
+
+# define parameters for configuration 0
+iternames.append('c5_d4_wd')
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 48, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 50, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
 ```
 
-The training progress is shown in the following diagram. After 50 epochs the model achieved an accuracy of 96.0 percent.
+The exact layer sizes and number of parameters are calculated by Keras as follows. A visual representation was created using the `plot_model` function from `keras.utils`.
 
-![alt text][image5]
+```
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+cropping2d_1 (Cropping2D)    (None, 65, 320, 3)        0         
+_________________________________________________________________
+lambda_1 (Lambda)            (None, 65, 320, 3)        0         
+_________________________________________________________________
+conv2d_1 (Conv2D)            (None, 31, 158, 24)       1824      
+_________________________________________________________________
+conv2d_2 (Conv2D)            (None, 14, 77, 36)        21636     
+_________________________________________________________________
+conv2d_3 (Conv2D)            (None, 5, 37, 48)         43248     
+_________________________________________________________________
+conv2d_4 (Conv2D)            (None, 3, 35, 64)         27712     
+_________________________________________________________________
+conv2d_5 (Conv2D)            (None, 1, 33, 64)         36928     
+_________________________________________________________________
+flatten_1 (Flatten)          (None, 2112)              0         
+_________________________________________________________________
+dropout_1 (Dropout)          (None, 2112)              0         
+_________________________________________________________________
+dense_1 (Dense)              (None, 100)               211300    
+_________________________________________________________________
+dropout_2 (Dropout)          (None, 100)               0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 50)                5050      
+_________________________________________________________________
+dropout_3 (Dropout)          (None, 50)                0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 10)                510       
+_________________________________________________________________
+dense_4 (Dense)              (None, 1)                 11        
+=================================================================
+Total params: 348,219
+Trainable params: 348,219
+Non-trainable params: 0
+_________________________________________________________________
+```
 
-I did not need to adjust my model architecture during training, because it worked very well right from the beginning. Out of curiosity I changed to less features per convolutional layer and even tried the original `LeNet` settings with only two convolutional layers (although keeping 3 channels for all colors as inpout). The more features and layers I removed the more difficult it was to tune the hyperparameters to achieve an accuracy above 90 percent.
+![alt text][image7]
 
-### 3. Test of model performance after training
+```python
+def train_model(itername, train_generator, train_size, valid_generator, valid_size, display_generator, display_size, \
+                batch_size, yimagerange, ysize, xsize, epochs, modelfilename, modelfileext, modellayoutpicfilename, \
+                modellayoutpicfileext, sMP, bdisplay = False, bdebug = False):
+# ...
+# Train model
+# ...
+# Inputs
+# ...
+# itername               : name of training iteration
+# train_generator        : variable pointing to function that retrieves next values from training generator
+# train_size             : total number of training data sets
+# valid_generator        : variable pointing to function that retrieves next values from validation generator
+# valid_size             : total number of validation data sets
+# display_generator      : variable pointing to function that retrieves next values from display generator
+# display_size           : total number of display data sets
+# batch_size             : batch size
+# yimagerange            : range of pixels used from source images in vertical direction
+# ysize                  : source image height in pixels
+# xsize                  : source image width in pixels
+# epochs                 : number of epochs
+# modelfilename          : file name in which model will be saved
+# modelfileext           : file extension for file in which model will be saved
+# modellayoutpicfilename : picture file in which model layout will be stored
+# modellayoutpicfileext  : file extension for picture file in which model layout will be stored
+# sMP                    : object containing model parameters that define the model layout
+# bdisplay               : boolean for 'display information'
+# bdebug                 : boolean for 'debug generator'
+    
+    # define Keras model
+    model = Sequential()
+    
+    # define Keras input adjustments
+    model.add(Cropping2D(cropping = ((yimagerange[0], (ysize - yimagerange[1])), (0, 0)), input_shape = (ysize, xsize, 3)))
+    model.add(Lambda(lambda x: (x / 255.0) - 0.5, \
+                     input_shape = (3, (ysize - (yimagerange[0] + (ysize - yimagerange[1]))), xsize)))
+    
+    # define Keras convolutional layers
+    for conv_layer in sMP.conv_layers:
+        model.add(Conv2D(conv_layer.features, conv_layer.filter_size[0], conv_layer.filter_size[1], \
+                         subsample = conv_layer.strides, activation = "relu", kernel_regularizer = sMP.regularizer))
+        if conv_layer.busepooling: model.add(MaxPooling2D())
+    
+    # define Keras dense layers
+    model.add(Flatten())
+    for full_layer in sMP.full_layers:
+        if (full_layer.keep_percentage < 1): model.add(Dropout(full_layer.keep_percentage))
+        model.add(Dense(full_layer.features))
+    
+    # print the layout of the model
+    plot_model(model, to_file = (modellayoutpicfilename + '_' + itername + modellayoutpicfileext), show_shapes = True, \
+               show_layer_names = True)
+    model.summary()
+    
+    # generate model
+    model.compile(loss = 'mse', optimizer = 'adam')
+    
+    # train model
+    history_object = model.fit_generator(train_generator, samples_per_epoch = np.int(train_size // batch_size), \
+                                         validation_data = valid_generator, \
+                                         nb_val_samples = np.int(valid_size // batch_size), nb_epoch = epochs, verbose = 1)
+                                         
+    # save trained model
+    model.save((modelfilename + '_' + itername + modelfileext))
+```
 
-The accuracy on the test data set is 94.3 percent.
 
-## 3. Predictions with the trained model
+subfolder = '../../GD_GitHubData/behavioral-cloning-data'
+yimagerange = [70, 135]
+max_train_size = 9999999999 # 256
+max_valid_size = 9999999999 # 256
+max_display_size = 10
+valid_percentage = 0.2
+steeroffset = 0.05 # 0.2
+batch_size = 32 # 256
+epochs = 3
+modelfilename = 'model'
+modelfileext = '.h5'
+modellayoutpicfilename = 'model'
+modellayoutpicfileext = '.png'
+bdisplay = True
+bdebug = False
 
-### 1. Test images from the web
 
-To further test whether the model is good in not only predicting the images on which it has been trained, 6 images of German traffic signs have been found using [Google's image search](https://images.google.com/). I created a function `load_images` to load such a sequence of images.
+## 4. Selecting the model architecture and hyperparameters
 
-![alt text][image6]
+### 1. Basic structure of the model
 
-The function `predict_image_labels` uses the previously described model to predict the labels of these untrained images. The function `check_accuracy` provides a quick check whether the untrained images are accurately predicted. A more thorough check is defined by the function `evaluate_top_k` which is used in the following.
+### 2. Considered model variations
 
-The model accurately predicts each of these untrained traffic signs as shown in the following picture sequence. The top 5 predictions are shown using the average image for each of these labels. The bar charts show the *softmax* probability for each prediction.
+### 3. Hyperparameter tuning
 
-The *Speed limit (80 km/h)* traffic sign can easily be confused with the *Speed limit (30 km/h)* traffic sign. For example, if the left side of the *8* was exposed to bad lighting in the test image, the prediction would not be as clear as shown below.
+## 5. Evaluating the model bahavior
 
-![alt text][image7]![alt text][image8]
+### 1. What does underfitting and overfitting mean in this example?
 
-Both *Road work* traffic sign examples are predicted very well. If road work symbol in the center wouldn't be as clearly visible as in these test images from the web, the prediction would be much harder and any of the red triangle pictures would be a good guess.
+### 2. Which model architecture and what parameters worked best?
 
-![alt text][image9]![alt text][image10]
-![alt text][image11]![alt text][image12]
+## 6. Discussion
 
-The *Keep right* traffic sign is very distinctive and hence gets detected very well. It is interesting that the other predictions in the top 5 are not blue colored traffic signs. It seems like color is not the highest distinguishing factor in the given model and general shapes are more important. Therefore, the shape of traffic signs should not be distorted in the test images to ensure a proper prediction.
-
-![alt text][image13]![alt text][image14]
-
-The *No passing* traffic sign test image from the web is angled in a way that the red car on the left nearly looks like a truck pictogram from a *No passing for vehicles over 3.5 metric tons* traffic sign. Indeed this is the model's second best guess.
-
-![alt text][image15]![alt text][image16]
-
-And finally the *Stop* traffic sign image from the web is so distinctive that even worse trained model versions picked it up accurately.
-
-![alt text][image17]![alt text][image18]
-
-The test images from the web have all been predicted accurately which exceeds the accuracy of the test data set. On the one hand looking at only 6 test images from the web is statistically not relevant. On the other hand using Google's search to find traffic sign images can be assumed to provide nice pictures of traffic signs. Even when I tried searching for *bad traffic sign scenery* in German language, most of the traffic sign images were very nice pictures - or snow covered sceneries with piles of snow around a traffic sign - and even a human cannot predict anything in these images. But I didn't give up and had some fun with other traffic signs further below.
-
-### 2. Exploring the inside of the model
-
-In order to visualize the weights in the convolutional layers of my neural network, I evaluated the model with the average *Stop* sign image from the training data set using the function `outputFeatureMap`.
-
-![alt text][image19]
-
-The first convolutional layer uses 3 color channels as input. Therefore, I chose to visualize the weights of each feature map using an *RGB* color image. The 18 feature maps of this layer clearly show that they are distinct by having different average color tones. The images on the left are more green-ish while the ones on the right show more blue and red color tones. Also, the area in which they emphasize on specific color inputs is very different. Especially the images in the center seem to emphasize on diagonal directions.
-
-![alt text][image20]
-
-The second convolutional layer has 54 feature maps for each of the 18 input channels. The following picture only shows the first 250 feature maps as grayscale images (a little more than 25 percent of all feature maps in this layer). Due to the larger size of the filter in the second layer, some of the features are very detailed while others focus on more general patterns.
-
-![alt text][image21]
-
-The third and final convolutional layer has 128 feature maps for each of the 54 input channels. The following picture only shows the first 250 feature maps as grayscale images (less than 4 percent of all feature maps in this layer). The filter size is again smaller and hence the individual features in these feature maps are coarser.
-
-![alt text][image22]
-
-### 3. Fun with unknown traffic signs
-
-The real fun with convolutional neural networks starts when we use them for something that they have not been trained for. What would they predict when they see US instead of German traffic signs? Let's try it!
-
-For the *Intersection* sign the model probably focuses on the large vertical black line in the center and thinks it might be a *General Caution* sign.
-
-![alt text][image23]![alt text][image24]
-
-The *Pedestrian Crossing* sign clearly puts the model out of its comfort zone and it cannot predict anything with a high probability.
-
-![alt text][image25]![alt text][image26]
-
-I think it is facinating that my model accurately predicts a *Yellow Stop* sign to be a *Stop* sign with pretty high probability although my model also takes into account the color.
-
-![alt text][image27]![alt text][image28]
-
-Now here it is: Who would have guessed that the US *Traffic Light* sign is close to the German *Traffic Light* sign? Well, I didn't and so does the model. It doesn't even consider it as part of the top 5 predictions.
-
-![alt text][image29]![alt text][image30]
-
-And it gets better: The *Right Turn Ahead* signs are pretty close besides being edgy versus round and the model nails it.
-
-![alt text][image31]![alt text][image32]
-
-Well, and here is the *Right Turn* sign that is really for away from anything in the training data set. Similar to the first sign in this fun sequence, the model probably focuses on the vertical black line in the middle and predicts a *General Caution* sign. Well, it's always good to be cautious with your predictions - or not?
-
-![alt text][image33]![alt text][image34]
-
-### 4. Searching within larger pictures
-
-In real life we probably don't have the luxury of predicting mug shots of traffic signs. We have to find them in a larger image. And now they can be larger or smaller. I created a little algorithm in the function `check_large_images` that scans a larger image with different scaling levels and tries to find traffic signs of any size in any position.
-
-The below pictures show the original image, a picture in which I marked all areas in which potential traffic signs have been predicted and finally a picture in which only the top predictions have been marked. The predicted areas have a yellow outline for the most likely prediction and a more and more black outline for the lesser likely predictions. As expected the most likely predictions for traffic signs are in the area of the actual traffic signs in the larger image.
-
-![alt text][image35]![alt text][image36]![alt text][image37]
-
-But which specific traffic signs does the model predict? It accurately lists the *Yield* and *Roundabout Mandatory* signs. Somehow it gets confused with the *Roundabout Mandatory* sign and detects many possible individual directions with even higher probability.
-
-![alt text][image38]
-
-## 4. Discussion
-
-Most images used to test my model are nice frontal shots of sunny day traffic signs. Looking at some of the results makes it very obvious that traffic signs that are covered by obstacles or snow or images taken at night during rain would challenge my model extremely.
 
 
 
