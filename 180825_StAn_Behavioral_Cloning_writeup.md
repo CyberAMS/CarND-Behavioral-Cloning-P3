@@ -77,7 +77,7 @@ Recording data in the *simulator* will save a sequence of images (center view, l
 
 The goal of this project is to have a car drive in the center of the provided track. Hence, collecting data of good center driving is essential. This will train the model on which steering angle to choose when seeing a specific image in the center view. The left and right views can be used to augment the training data with views that require a slight steering adjustment to get back to the center line. In the following the slight steering adjustment is defined by the parameter `steeroffset` (value greater or equal to 0). The following images show a left, center and right view of the same training data set. The steering angle `steering_angle` is a value between -1 and 1. A slightly negative value demands a slight steering to the left. The car uses maximum throttle for `throttle` (value between 0 and 1), no braking for `braking` (value between 0 and 1) and drives with a maximum speed `speed` (value between 0 and 30-ish).
 
-![alt text][image1]![alt text][image2]![alt text][image3]
+![alt text][image1] ![alt text][image2] ![alt text][image3]
 
 ```
 left view: steering_angle = -0.03759398 + steeroffset
@@ -90,7 +90,7 @@ speed = 30.19014
 
 The algorithm should focus on the road itself and not on objects in the environment. The basic strategy does not include to initiate specific driving actions when e.g. a specific tree is seen on the side of the road. Therefore, all the images will be cropped at the top and bottom as shown in the following.
 
-![alt text][image2]![alt text][image4]
+![alt text][image2] ![alt text][image4]
 
 ### 2. Pre-processing of recovery data
 
@@ -100,7 +100,7 @@ We need to train the model to steer away from the track boundary if the car gets
 
 As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events. A valid recovery situation is determined as being part of the first third of an event when the steering wheel clearly changes from left to right steering or the other way round. The second third would be considered crossing the center line and the last third would be considered steering towards the closest boundary. Here are examples for first, second and last third images of a single event as decribed before along with their steering angles.
 
-![alt text][image5]![alt text][image6]![alt text][image7]
+![alt text][image5] ![alt text][image6] ![alt text][image7]
 
 ```
 first third: steering_angle = 0.2406015
@@ -128,7 +128,7 @@ To further augment the training data I also drove the track in the opposite dire
 
 Each image can be used as is and horizontally flipped. The sign of the steering angle of the flipped image must also be flipped to maintain a valid training data set. Here is an example of a original and flipped image and their steering angles.
 
-![alt text][image2]![alt text][image8]
+![alt text][image2] ![alt text][image8]
 
 ```
 original center view: steering_angle = -0.03759398
@@ -139,8 +139,25 @@ With the before mentioned training data the car tends to either stay in the cent
 
 A further step would be to shift the image left and right, adjust the steering angle accordingly to encourage center driving  and regenerate the sides of the image using an auto-encoder that has been trained on the complete training dataset. This has not been implemented yet.
 
+The total number of training datasets is shown in the following table. The columns contain the numbers of center, left and right view images in original and flipped state. The rows contain the numbers for the individual recordings of track `track1`. Each loop on `track1` needed to be split into 2 separate recordings, because recording the full loop at once sometimes led to an error. The center line driving is recorded as `center` and `counter` for the opposite direction. The strong recovery weaving is recorded as `weave` and `ceave` for the opposite direction. The medium recovery weaving is recorded as `meave` and `deave` for the opposite direction. Although many invalid images are ignored during the recovery weaving recordings, the total number is still high, because these loops are driven at much slower speeds. 
 
+```
+Number of image files: 88020
 
+                 center  centerflipped  left  leftflipped  right  rightflipped
+track1_center1     1325           1325  1325         1325   1325          1325
+track1_center2     1289           1289  1289         1289   1289          1289
+track1_counter1    1287           1287  1287         1287   1287          1287
+track1_counter2    1327           1327  1327         1327   1327          1327
+track1_weave1      2106           2106  2106         2106   2106          2106
+track1_weave2      1162           1162  1162         1162   1162          1162
+track1_ceave1       631            631   631          631    631           631
+track1_ceave2      1918           1918  1918         1918   1918          1918
+track1_meave1      1064           1064  1064         1064   1064          1064
+track1_meave2       857            857   857          857    857           857
+track1_deave1       738            738   738          738    738           738
+track1_deave2       966            966   966          966    966           966
+```
 
 
 

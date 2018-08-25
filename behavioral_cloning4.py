@@ -13,6 +13,7 @@ from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 from keras import regularizers
 from keras.utils import plot_model
+import pandas as pd
 
 class ConvLayer:
 # ...
@@ -134,6 +135,7 @@ def get_data(subfolder, steeroffset, bdisplay = False):
     measurements = []
     bmustflip = []
     bmustautoencode = []
+    counter = dict()
     
     # get paths to all csv files
     files = []
@@ -152,6 +154,14 @@ def get_data(subfolder, steeroffset, bdisplay = False):
         path, name = os.path.split(file)
         prefix = name[0:(len(name) - len(drivefilename))]
         imagefoldername = prefix + imagefolderpostfix
+        
+        # initialize outputs
+        counter[prefix] = {'center': 0, 'centerflipped': 0, 'left': 0, 'leftflipped': 0, 'right': 0, 'rightflipped': 0}
+        #counter[prefix, 'centerflipped'] = 0
+        #counter[prefix, 'left'] = 0
+        #counter[prefix, 'leftflipped'] = 0
+        #counter[prefix, 'right'] = 0
+        #counter[prefix, 'rightflipped'] = 0
         
         # read csv file content
         lines = []
@@ -181,36 +191,42 @@ def get_data(subfolder, steeroffset, bdisplay = False):
                 measurements.append([angle, throttle, brake, speed])
                 bmustflip.append(False)
                 bmustautoencode.append(False)
+                counter[prefix]['center'] = counter[prefix]['center'] + 1
                 
                 # add flipped center image to output
                 imagefiles.append(centerfile)
                 measurements.append([-angle, throttle, brake, speed])
                 bmustflip.append(True)
                 bmustautoencode.append(False)
+                counter[prefix]['centerflipped'] = counter[prefix]['centerflipped'] + 1
                 
                 # add left image to output
                 imagefiles.append(leftfile)
                 measurements.append([(angle + steeroffset), throttle, brake, speed])
                 bmustflip.append(False)
                 bmustautoencode.append(False)
+                counter[prefix]['left'] = counter[prefix]['left'] + 1
                 
                 # add flipped left image to output
                 imagefiles.append(leftfile)
                 measurements.append([-(angle + steeroffset), throttle, brake, speed])
                 bmustflip.append(True)
                 bmustautoencode.append(False)
+                counter[prefix]['leftflipped'] = counter[prefix]['leftflipped'] + 1
                 
                 # add right image to output
                 imagefiles.append(rightfile)
                 measurements.append([(angle - steeroffset), throttle, brake, speed])
                 bmustflip.append(False)
                 bmustautoencode.append(False)
+                counter[prefix]['right'] = counter[prefix]['right'] + 1
                 
                 # add flipped right image to output
                 imagefiles.append(rightfile)
                 measurements.append([-(angle - steeroffset), throttle, brake, speed])
                 bmustflip.append(True)
                 bmustautoencode.append(False)
+                counter[prefix]['rightflipped'] = counter[prefix]['rightflipped'] + 1
                 
                 # potential augmentation with autoencoder and offset to left and right
                 # would need to adjust steering angle, too (linear increase from center to sides and
@@ -220,8 +236,7 @@ def get_data(subfolder, steeroffset, bdisplay = False):
                 #bmustflip.append(False)
                 #bmustautoencode.append(True)
                 # do this for right image and flipped left and right images, too
-
-    
+                
     # get size of images
     image = cv2.imread(imagefiles[0])
     ysize = image.shape[0]
@@ -231,6 +246,8 @@ def get_data(subfolder, steeroffset, bdisplay = False):
     if bdisplay:
         print('Number of image files:', len(imagefiles), '; number of measurements:', len(measurements), '; must flip:', \
               np.sum(np.array(bmustflip) == True), '; size:', xsize, 'x', ysize)
+        countertable = pd.DataFrame(counter).T
+        print(countertable)
         
     return imagefiles, measurements, bmustflip, bmustautoencode, ysize, xsize
 
