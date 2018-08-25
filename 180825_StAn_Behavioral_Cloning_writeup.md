@@ -72,7 +72,7 @@ Recording data in the *simulator* will save a sequence of images (center view, l
 
 The goal of this project is to have a car drive in the center of the provided track. Hence, collecting data of good center driving is essential. This will train the model on which steering angle to choose when seeing a specific image in the center view. The left and right views can be used to augment the training data with views that require a slight steering adjustment to get back to the center line. In the following the slight steering adjustment is defined by the parameter `steeroffset` (value greater or equal to 0). The following images show a left, center and right view of the same training data set. The steering angle `steering_angle` is a value between -1 and 1. A slightly negative value demands a slight steering to the left. The car uses maximum throttle for `throttle` (value between 0 and 1), no braking for `braking` (value between 0 and 1) and drives with a maximum speed `speed` (value between 0 and 30-ish).
 
-![alt text][image1]![alt text][image2]![alt text][image3]
+![alt text][image1 =200x]![alt text][image2 =200x]![alt text][image3 =200x]
 
 ```
 left view: steering_angle = -0.03759398 + steeroffset
@@ -89,16 +89,24 @@ Although the center line training includes center line driving and a soft versio
 
 We need to train the model to steer away from the track boundary if the car gets too close to it. We can record the necessary steering angle based on the behavior of a real driver by driving on the track and continuously weaving from left to right. Then we pre-process this recovery data to only consider images that steer the car away from the boundary. We don't want to train the model to steer towards the track boundary. We also don't want to train the model to cross over the center line with a steering angle that moves the car away from the center line like we do during the weaving events.
 
-As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events.
+As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events. A valid recovery situation is determined as being part of the first third of an event when the steering wheel clearly changes from left to right steering or the other way round. The second third would be considered crossing the center line and the last third would be considered steering towards the closest boundary.
+
+![alt text][image1]![alt text][image2]![alt text][image3]
+
+
+The following table shows the columns of the *\*.csv* file and the values that they contain.
 
 | Row number | Column D | Column E | Column F | Column G |
 |------------|----------|----------|----------|----------|
-| 11 | \<steering angle\> | \<throttle\> | \<braking\> | \<speed\> |
+| 6 | \<steering angle\> | \<throttle\> | \<braking\> | \<speed\> |
 
+The next table shows the formulas I used to mark the valid recovery situations starting in row 6. Row 1 to 5 cannot contain valid situations. Column I is used to identify whether the new steering angle is part of a recovery (1 if yes and 0 if not) from the right (steering angle larger than the average of the last 5 events or steering angle negative) or the left (steering angle smaller than the average of the last 5 events or steering angle positive) side. Column J increases the counter for how many steps the most recent recovery already took by 1 if a recovery takes place - counting from the end to the beginning. Column K divides column J by 3 and is used by column L to count down by 1 step each row. Column M uses this information to return 1 if the current row is part of the first third of the latest recovery event and 0 otherwise.
 
 | Row number | Column I | Column J | Column K | Column L | Column M |
 |------------|----------|----------|----------|----------|----------|
-| 11 | =IF(OR(AND(D11>=AVERAGE(D6:D10),D11<0),AND(D11<=AVERAGE(D6:D10),D11>0)),1,0) | =IF(I11=0,0,J12+I11) | =IF(J11=0,0,J11/3) | =IF(K11=0,0,IF(AND(K10=0,K11>0),K11,L10-1)) | =IF(L11>=1,1,0) |
+| 6 | =IF(OR(AND(D6>=AVERAGE(D1:D5),D6<0),AND(D6<=AVERAGE(D1:D5),D6>0)),1,0) | =IF(I6=0,0,J7+I6) | =IF(J6=0,0,J6/3) | =IF(K6=0,0,IF(AND(K5=0,K6>0),K6,L5-1)) | =IF(L6>=1,1,0) |
+
+Columns H to L are deleted before exporting the *Microsoft Excel* file to a *\*.csv'* file. Column M stays and is read as variable `btake` for each image.
 
 ### 3. Augmentation of behavioral training data
 
