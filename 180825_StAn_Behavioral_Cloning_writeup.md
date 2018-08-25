@@ -72,7 +72,9 @@ Recording data in the *simulator* will save a sequence of images (center view, l
 
 The goal of this project is to have a car drive in the center of the provided track. Hence, collecting data of good center driving is essential. This will train the model on which steering angle to choose when seeing a specific image in the center view. The left and right views can be used to augment the training data with views that require a slight steering adjustment to get back to the center line. In the following the slight steering adjustment is defined by the parameter `steeroffset` (value greater or equal to 0). The following images show a left, center and right view of the same training data set. The steering angle `steering_angle` is a value between -1 and 1. A slightly negative value demands a slight steering to the left. The car uses maximum throttle for `throttle` (value between 0 and 1), no braking for `braking` (value between 0 and 1) and drives with a maximum speed `speed` (value between 0 and 30-ish).
 
-![alt text][image1]{: width="100px"}![alt text][image2]![alt text][image3]
+![alt text][image1]![alt text][image2]![alt text][image3]
+
+![](docu_images/01_01_left_2018_08_18_06_11_22_467.jpg =100x)
 
 ```
 left view: steering_angle = -0.03759398 + steeroffset
