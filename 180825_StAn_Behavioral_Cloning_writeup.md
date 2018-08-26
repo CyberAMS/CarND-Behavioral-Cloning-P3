@@ -31,15 +31,9 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
 
 [//]: # (Image References)
 
-[image1]: docu_images/01_01_left_2018_08_18_06_11_22_467.jpg
-[image2]: docu_images/01_02_center_2018_08_18_06_11_22_467.jpg
-[image3]: docu_images/01_03_right_2018_08_18_06_11_22_467.jpg
-[image4]: docu_images/01_02_center_2018_08_18_06_11_22_467_cropped.jpg
-[image5]: docu_images/02_01_center_2018_08_18_06_36_35_877.jpg
-[image6]: docu_images/02_02_center_2018_08_18_06_36_37_839.jpg
-[image7]: docu_images/02_03_center_2018_08_18_06_36_39_145.jpg
-[image8]: docu_images/01_02_center_2018_08_18_06_11_22_467_flipped.jpg
-[image9]: docu_images/03_01_model_c5_d4_wd.png
+[image1]: docu_images/01_02_center_2018_08_18_06_11_22_467.jpg
+[image2]: docu_images/01_02_center_2018_08_18_06_11_22_467_cropped.jpg
+[image3]: docu_images/01_02_center_2018_08_18_06_11_22_467_flipped.jpg
 
 ---
 
@@ -78,7 +72,6 @@ Recording data in the *simulator* will save a sequence of images (center view, l
 
 The goal of this project is to have a car drive in the center of the provided track. Hence, collecting data of good center driving is essential. This will train the model on which steering angle to choose when seeing a specific image in the center view. The left and right views can be used to augment the training data with views that require a slight steering adjustment to get back to the center line. In the following the slight steering adjustment is defined by the parameter `steeroffset` (value greater or equal to 0). The following images show a left, center and right view of the same training data set. The steering angle `steering_angle` is a value between -1 and 1. A slightly negative value demands a slight steering to the left. The car uses maximum throttle for `throttle` (value between 0 and 1), no braking for `braking` (value between 0 and 1) and drives with a maximum speed `speed` (value between 0 and 30-ish).
 
-![alt text][image1] ![alt text][image2] ![alt text][image3]
 <img src="docu_images/01_01_left_2018_08_18_06_11_22_467.jpg" width="30%"> <img src="docu_images/01_02_center_2018_08_18_06_11_22_467.jpg" width="30%"> <img src="docu_images/01_03_right_2018_08_18_06_11_22_467.jpg" width="30%">
 
 ```
@@ -92,7 +85,7 @@ speed = 30.19014
 
 The algorithm should focus on the road itself and not on objects in the environment. The basic strategy does not include to initiate specific driving actions when e.g. a specific tree is seen on the side of the road. Therefore, all the images will be cropped at the top and bottom as shown in the following.
 
-![alt text][image2] ![alt text][image4]
+![alt text][image1] ![alt text][image2]
 
 ### 2. Pre-processing of recovery data
 
@@ -102,7 +95,7 @@ We need to train the model to steer away from the track boundary if the car gets
 
 As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events. A valid recovery situation is determined as being part of the first third of an event when the steering wheel clearly changes from left to right steering or the other way round. The second third would be considered crossing the center line and the last third would be considered steering towards the closest boundary. Here are examples for first, second and last third images of a single event as decribed before along with their steering angles.
 
-![alt text][image5] ![alt text][image6] ![alt text][image7]
+<img src="docu_images/02_01_center_2018_08_18_06_36_35_877.jpg" width="30%"> <img src="02_02_center_2018_08_18_06_36_37_839.jpg" width="30%"> <img src="docu_images/02_03_center_2018_08_18_06_36_39_145.jpg" width="30%">
 
 ```
 first third: steering_angle = 0.2406015
@@ -130,7 +123,7 @@ To further augment the training data I also drove the track in the opposite dire
 
 Each image can be used as is and horizontally flipped. The sign of the steering angle of the flipped image must also be flipped to maintain a valid training data set. Here is an example of a original and flipped image and their steering angles.
 
-![alt text][image2] ![alt text][image8]
+![alt text][image1] ![alt text][image3]
 
 ```
 original center view: steering_angle = -0.03759398
