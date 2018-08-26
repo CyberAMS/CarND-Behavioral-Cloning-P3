@@ -464,7 +464,7 @@ _________________________________________________________________
 
 ### 1. Considered model variations
 
-<img src="docu_images/03_01_model_c2_d3_nd.png" width="30%"> <img src="docu_images/03_02_model_c2_d3_wd.png" width="30%"> <img src="docu_images/03_03_model_c5_d4_nd.png" width="30%"> <img src="docu_images/03_04_model_c5_d4_wd.png" width="30%">
+<img src="docu_images/03_01_model_c2_d3_nd.png" width="25%" align="top"><img src="docu_images/03_02_model_c2_d3_wd.png" width="25%" align="top"><img src="docu_images/03_03_model_c5_d4_nd.png" width="25%" align="top"><img src="docu_images/03_04_model_c5_d4_wd.png" width="25%" align="top">
 
 ### 2. Hyperparameter tuning
 
