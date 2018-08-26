@@ -8,7 +8,7 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
 
 The following table shows an overview of the most important files:
 
-| File                                          |                                                                         |
+| File                                          | Description                                                             |
 |-----------------------------------------------|-------------------------------------------------------------------------|
 | 180825_StAn_Behavioral_Cloning_writeup.md     | This file                                                               |
 | behavioral_cloning4.py                        | All scripts necessary to create the Keras model                         |
@@ -550,7 +550,7 @@ for itername, sMP in zip(iternames, sMPs):
 
 The parameters `max_train_size` and `max_valid_size` are only used for debugging purposes to limit the training to a few iterations. The number of epochs `epochs` is the only hyperparameter that has not been defined yet. For the considered model configurations and the available training dataset 3 epochs lead to a low error without running unnecessary long and over-training the model. The below picture shows the training progress for model configuration `c5_d4_wd`. The other model configurations mentioned above show a very similar convergence.
 
-![alt text][image1]
+![alt text][image4]
 
 The batch size `batch_size` has been set to 32. Values significantly above 256 would require more epochs. I didn't look into this parameter any further as the results looked very good with a value of 32.
 
@@ -560,11 +560,77 @@ The L2 regularization parameter was left at the default value of 0.01 which seem
 
 ## 5. Evaluating the model bahavior
 
+The behavior of the model can be evaluated with the *simulator* in *Autonomous Mode*. The first command needs to be executed to connect and then run the *simulator* with the model. The second command takes the recorded images and creates a video.
+
+```python
+python drive.py model.h5 IMAGES
+python video.py IMAGES --fps 60
+```
+
 ### 1. What does underfitting and overfitting mean in this example?
 
+The first question I asked myself was how do I know whether my model is underfit or overfit?
 
+Underfitting is comparably easy to explain. In this case the model does not react as intended, i.e. it cannot keep the car close to the center line and it cannot recover from the left and right boundaries. This becomes very obvious in turns and can be experienced by the car leaving the safe track surface.
+
+Overfitting occurs when the model cannot generalize the input anymore. It knows exactly what to do when the trained input is provided. In this case it can either stay on the center line or recover from the boundaries in exactly the trained locations. An overfit model will not be able to recover in locations that it has not been trained for and it will not know what to do when it is not driving on the trained center line. Latter can lead to oscillations around the center line or from bounary to boundary. Not knowing how to recover in an untrained boundary location can lead to leaving the safe track surface.
+
+I also attempted a very aggressive way to not overtrain the model. I limited the training data set to 256 random images only. The car started out very smooth and took the first turn in the center. It even drove over the bridge, but then crashed into the block at the end of the bridge, because this obstacle clearly was not part of the small random dataset.
+
+<img src="docu_images/05_01_limited_curve.jpg" width="30%" align="top"> <img src="docu_images/05_02_limited_bridge.jpg" width="30%" align="top"> <img src="docu_images/05_03_limited_crash.jpg" width="30%" align="top">
 
 ### 2. Which model architecture and what parameters worked best?
+
+I quickly experienced that speed plays an important role. A model that works well at [lower speeds like 9](IMAGES_9_inf_020_wm_c5_d4_wd.mp4) does not necessarily work well at [higher speeds like 20](IMAGES_20_inf_020_wm_c5_d4_wd.mp4). As a human driver I was able to navigate through the whole track at the highest possible speed of 30 without too much effort. As most of my models worked well at a speed of 9 I decided to focus on the more challenging speed of 20 to clearly see behavioral differences.
+
+Another important parameter is the `steeroffset`. It defines how soft or aggressive the model reacts to deviations from the center line. [Higher values](IMAGES_20_inf_020_wm_c5_d4_wd.mp4) introduce more oscillations around the center line. [Lower values](IMAGES_20_inf_005_wm_c5_d4_wd.mp4) can lead to drifting to the left and right boundaries. While the model is able to handle larger `steeroffset` values at lower speeds, this parameter must not be too large for higher speeds, because the oscillations can extend beyond the boundaries and the car leaves the track. To compensate the drifting behavior with smaller `steeroffset` values, I recorded the additional medium recovery dataset. With this the model can learn how to recover when it is away from the center line, but not yet at the boundaries.
+
+All model configurations introduced above have been tested in combination with different settings for `speed`, the amount of images used for training, different values for `steeroffset` and whether or not to use a medium recovery dataset. Below is the naming convention for the individual test runs along with how long the car drove safe during the first lap on the track.
+
+```
+<speed>_<limit>_<steeroffset>_<medium>_<convolutions>_<full>_<dropout>
+
+speed        : driving speed
+limit        : number of images to which the training dataset was limited {256: small random number, inf: all images}
+steeroffset  : value used as steering offset {0.05: soft, 0.20: aggressive, 0.40: very aggressive}
+medium       : {wm: with medium recovery dataset, nm: no medium recovery dataset}
+convolutions : number of convolutional layers
+full         : number of fully connected layers
+dropout      : {wd: with dropout, nd: no dropout}
+```
+
+| Best to worst configurations | Percentage of safe driving |
+|------------------------------|----------------------------|
+| 9_inf_005_wm_c5_d4_wd        | 100%                       |
+| 9_inf_020_wm_c5_d4_wd        | 100%                       |
+| 20_inf_005_wm_c5_d4_wd       | 100%                       |
+| 20_inf_005_wm_c5_d4_nd       | 100%                       |
+| 20_inf_005_wm_c2_d3_wd       | 100%                       |
+| 20_inf_005_wm_c2_d3_nd       | 100%                       |
+| 20_inf_020_wm_c5_d4_wd       | 100%                       |
+| 20_inf_020_wm_c2_d3_wd       | 100%                       |
+| 20_inf_005_nm_c2_d3_wd       | 100%                       |
+| 20_inf_020_wm_c2_d3_nd       | 69%                        |
+| 20_256_005_nm_c5_d4_wd       | 63%                        |
+| 20_inf_005_nm_c5_d4_wd       | 45%                        |  
+| 20_inf_040_wm_c5_d4_wd       | 42%                        |
+| 20_inf_040_wm_c2_d3_wd       | 31%                        |
+| 20_inf_005_nm_c2_d3_nd       | 26%                        |
+| 20_256_005_nm_c5_d4_nd       | 25%                        |
+| 20_inf_040_wm_c5_d4_nd       | 24%                        |
+| 20_inf_020_wm_c5_d4_nd       | 24%                        |
+| 20_256_005_nm_c2_d3_nd       | 19%                        |
+| 20_inf_020_nm_c2_d3_wd       | 13%                        |
+| 20_inf_020_nm_c5_d4_wd       | 12%                        |
+| 20_inf_040_wm_c2_d3_nd       | 11%                        |
+| 20_inf_020_nm_c5_d4_nd       | 10%                        |
+| 20_inf_020_nm_c2_d3_nd       | 5%                         |
+| 20_256_005_nm_c2_d3_wd       | 4%                         |
+
+
+
+
+
 
 ## 6. Discussion
 
