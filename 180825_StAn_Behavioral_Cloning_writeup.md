@@ -563,7 +563,7 @@ The L2 regularization parameter was left at the default value of 0.01 which seem
 
 The behavior of the model can be evaluated with the *simulator* in *Autonomous Mode*. The first command needs to be executed to connect and then run the *simulator* with the model. The second command takes the recorded images and creates a video.
 
-```python
+```
 python drive.py model.h5 IMAGES
 python video.py IMAGES --fps 60
 ```
@@ -658,4 +658,8 @@ All the other unsafe configurations are facing on of the following deficiencies:
 
 ## 6. Discussion
 
-TEXT
+Initially I was surprised how easy it is to capture your own behavior with a neural network and use it to successfully drive a car around the same track.
+
+Once I looked more into it I realized that it is not easy to drive in the same way as the human driver. The model architecture in the above example is not sophisticated enough to generate extremely smooth driving. Also, the goal was to follow the center line. A more realistic case would be to allow faster speeds and look for the optimal line to achieve the fastest lap time. Can the model get better than the human? It would require that the model learns from its own mistakes and tries to learn driving laps and not only to predict a prerecorded steering angle. Throttle and braking prediction would also need to be included.
+
+Throttle and braking predictions are also required to successfully drive the second track that was provided. On this track some decends are so steep that braking is required to not get too fast as a human driver. Driving this track with a constant speed would require a very low speed.
