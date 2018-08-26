@@ -6,6 +6,26 @@ The goal of this project is to use a convolutional neural network (CNN) to steer
 
 Everything has been programmed in Python 3 using Tensorflow, Keras and the Udacity Self-Driving Car Engineer Simulator.
 
+The following table shows an overview of the most important files:
+
+| File                                          |                                                                         |
+|-----------------------------------------------|-------------------------------------------------------------------------|
+| 180825_StAn_Behavioral_Cloning_writeup.md     | This file                                                               |
+| behavioral_cloning4.py                        | All scripts necessary to create the Keras model                         |
+| 180823_StAn_CarND-Behavioral-Cloning-P3.ipynb | Jupyter notebook for executing behavioral_cloning4.py                   |
+| model.h5                                      | Keras model for final submission (same as model_inf_005_wm_c5_d4_wd.h5) |
+| model_inf_005_wm_c5_d4_wd.h5                  | Keras model using all training data and soft steeroffset = 0.05         |
+| model_inf_020_wm_c5_d4_wd.h5                  | Keras model using all training data and aggressive steeroffset = 0.2    |
+| drive.py                                      | Drive file for final submission (same as drive20.py)                    |
+| drive20.py                                    | Python script to connect to simulator and drive with speed = 20         |
+| drive9.py                                     | Python script to connect to simulator and drive with speed = 9          |
+| videp.py                                      | Python script to create video (unchanged)                               |
+| video.mp4                                     | Video for final submission (same as IMAGES_20_inf_005_wm_c5_d4_wd.mp4)  |
+| IMAGES_20_inf_005_wm_c5_d4_wd.mp4             | Video with speed = 20 and soft steeroffset = 0.05                       |
+| IMAGES_20_inf_020_wm_c5_d4_wd.mp4             | Video with speed = 20 and aggressive steeroffset = 0.2                  |
+| IMAGES_9_inf_005_wm_c5_d4_wd.mp4              | Video with speed = 9 and soft steeroffset = 0.05                        |
+| IMAGES_9_inf_020_wm_c5_d4_wd.mp4              | Video with speed = 9 and aggressive steeroffset = 0.2                   |
+
 ---
 
 ## Content
@@ -33,6 +53,7 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
 [image1]: docu_images/01_02_center_2018_08_18_06_11_22_467.jpg
 [image2]: docu_images/01_02_center_2018_08_18_06_11_22_467_cropped.jpg
 [image3]: docu_images/01_02_center_2018_08_18_06_11_22_467_flipped.jpg
+[image4]: docu_images/04_01_mse_loss_index.png
 
 ---
 
@@ -182,9 +203,7 @@ The training datasets are determined by the function `get_data`. This function r
 
 The actual content of the image files is loaded and pre-processed with the `get_data_generator` function. It loops infinitely over the dataset and shuffles it at the beginning before going through it again and again. The output `X_data` contains as many images as defined by `batch_size`. The output `y_data` contains the measurements for these images (only the steering angle in this example).
 
-The parameter `valid_percentage` defines how much of the dataset is used for validation leaving the rest for training. In this example 20 percent of the complete dataset is reservered for validation.
-
-Separate generators are created for training (`train_generator`), validation (`valid_generator`) and displaying  (`display_generator`) images. The `display_generator` is used to loop through all images for visualization only.
+The parameter `valid_percentage` defines how much of the dataset is used for validation leaving the rest for training. In this example 20 percent of the complete dataset is reservered for validation. Separate generators are created for training (`train_generator`) and validation (`valid_generator`) images.
 
 ```python
 def get_data_generator(imagefiles, measurements, bmustflip, batch_size):
@@ -261,7 +280,6 @@ display_size = len(imagefiles)
 # define data generators to retrieve batches for training and validation
 train_generator = get_data_generator(imagefiles_train, measurements_train, bmustflip_train, batch_size, [0, ysize])
 valid_generator = get_data_generator(imagefiles_valid, measurements_valid, bmustflip_valid, batch_size, [0, ysize])
-display_generator = get_data_generator(imagefiles, measurements, bmustflip, batch_size, [0, ysize])
 ```
 
 ### 2. Flexible model definition
@@ -353,9 +371,9 @@ The layout of the model is plotted to an image file via the `plot_model` functio
 The model is created by selecting the `mse` (mean square error) loss function and an `adam` optimizer for training. The actual training happens in the `fit_generator` function. It takes the training dataset from the generator `train_generator` and the validation dataset from the generator `valid_generator` that have been defined before. The number of epochs `epochs` is also passed to this function. The final model is then saved to a file.
 
 ```python
-def train_model(itername, train_generator, train_size, valid_generator, valid_size, display_generator, display_size, \
+def train_model(itername, train_generator, train_size, valid_generator, valid_size, \
                 batch_size, yimagerange, ysize, xsize, epochs, modelfilename, modelfileext, modellayoutpicfilename, \
-                modellayoutpicfileext, sMP, bdisplay = False, bdebug = False):
+                modellayoutpicfileext, sMP):
 # ...
 # Train model
 # ...
@@ -366,8 +384,6 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
 # train_size             : total number of training data sets
 # valid_generator        : variable pointing to function that retrieves next values from validation generator
 # valid_size             : total number of validation data sets
-# display_generator      : variable pointing to function that retrieves next values from display generator
-# display_size           : total number of display data sets
 # batch_size             : batch size
 # yimagerange            : range of pixels used from source images in vertical direction
 # ysize                  : source image height in pixels
@@ -378,8 +394,6 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
 # modellayoutpicfilename : picture file in which model layout will be stored
 # modellayoutpicfileext  : file extension for picture file in which model layout will be stored
 # sMP                    : object containing model parameters that define the model layout
-# bdisplay               : boolean for 'display information'
-# bdebug                 : boolean for 'debug generator'
     
     # define Keras model
     model = Sequential()
@@ -464,32 +478,91 @@ _________________________________________________________________
 
 ### 1. Considered model variations
 
-<img src="docu_images/03_01_model_c2_d3_nd.png" width="25%" align="top"><img src="docu_images/03_02_model_c2_d3_wd.png" width="25%" align="top"><img src="docu_images/03_03_model_c5_d4_nd.png" width="25%" align="top"><img src="docu_images/03_04_model_c5_d4_wd.png" width="25%" align="top">
+The previously described model configuration `c5_d4_wd` worked very well right from the beginning. In order to understand why this is the case and whether there is a simpler version, I defined 3 more configurations that eliminated some of its characteristics step by step. The model configuration `c5_d4_nd` is very similar, but has no dropout layers in the fully connected section of the model. The model configuration `c2_d3_wd` only uses 2 convolutional layers. And the model configuration `c2_d3_nd` only uses 2 convolutional layers and has no dropout layers in the fully connected section of the model.
+
+```
+# define parameters for configuration 1
+iternames.append('c5_d4_nd')
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 48, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+conv_layers.append(ConvLayer(features = 64, filter_size = (3, 3), strides = None, busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 1))
+full_layers.append(FullLayer(features = 50, keep_percentage = 1))
+full_layers.append(FullLayer(features = 10, keep_percentage = 1))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
+
+# define parameters for configuration 2
+iternames.append('c2_d3_wd')
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 10, keep_percentage = 0.5))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
+
+# define parameters for configuration 3
+iternames.append('c2_d3_nd')
+conv_layers = []
+conv_layers.append(ConvLayer(features = 24, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+conv_layers.append(ConvLayer(features = 36, filter_size = (5, 5), strides = (2, 2), busepooling = False))
+full_layers = []
+full_layers.append(FullLayer(features = 100, keep_percentage = 1))
+full_layers.append(FullLayer(features = 10, keep_percentage = 1))
+full_layers.append(FullLayer(features = 1, keep_percentage = 1))
+sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full_layers.copy(), \
+                            regularizer = regularizers.l2(0.01)))
+```
+
+A graphical representation of the different model configurations is shown below. The elimination of several characteristics from left to right is clearly visible.
+
+<img src="docu_images/03_04_model_c5_d4_wd.png" width="25%" align="top"><img src="docu_images/03_03_model_c5_d4_nd.png" width="25%" align="top"><img src="docu_images/03_02_model_c2_d3_wd.png" width="25%" align="top"><img src="docu_images/03_01_model_c2_d3_nd.png" width="25%" align="top">
 
 ### 2. Hyperparameter tuning
 
+The before described pipeline and model variations can be used and executed with the following code.
+
 ```
-subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
 max_train_size = 9999999999 # 256
 max_valid_size = 9999999999 # 256
-max_display_size = 10
-valid_percentage = 0.2
-steeroffset = 0.05 # 0.2
-batch_size = 32 # 256
 epochs = 3
 modelfilename = 'model'
 modelfileext = '.h5'
 modellayoutpicfilename = 'model'
 modellayoutpicfileext = '.png'
-bdisplay = True
-bdebug = False
+
+# train all desired model configurations
+for itername, sMP in zip(iternames, sMPs):
+    train_model(itername, train_generator, np.min([train_size, max_train_size]), valid_generator, \
+                np.min([valid_size, max_valid_size]), \
+                batch_size, yimagerange, ysize, xsize, epochs, modelfilename, modelfileext, modellayoutpicfilename, \
+                modellayoutpicfileext, sMP)
 ```
 
+The parameters `max_train_size` and `max_valid_size` are only used for debugging purposes to limit the training to a few iterations. The number of epochs `epochs` is the only hyperparameter that has not been defined yet. For the considered model configurations and the available training dataset 3 epochs lead to a low error without running unnecessary long and over-training the model. The below picture shows the training progress for model configuration `c5_d4_wd`. The other model configurations mentioned above show a very similar convergence.
+
+![alt text][image1]
+
+The batch size `batch_size` has been set to 32. Values significantly above 256 would require more epochs. I didn't look into this parameter any further as the results looked very good with a value of 32.
+
+The dropout amount was varied between 0 and 0.5 by selecting the different model configurations. The effect is described further below.
+
+The L2 regularization parameter was left at the default value of 0.01 which seemed to work well with previous convolutional neural network models before.
 
 ## 5. Evaluating the model bahavior
 
 ### 1. What does underfitting and overfitting mean in this example?
+
+
 
 ### 2. Which model architecture and what parameters worked best?
 
