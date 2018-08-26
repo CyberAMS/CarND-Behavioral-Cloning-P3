@@ -466,7 +466,7 @@ _________________________________________________________________
 ```
 
 ![alt text][image9]
-<img src="docu_images/03_01_model_c5_d4_wd.png" width="50%">
+<img src="docu_images/03_01_model_c5_d4_wd.png" width="20%">
 
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
