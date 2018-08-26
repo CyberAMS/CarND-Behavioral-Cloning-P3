@@ -21,7 +21,6 @@ Everything has been programmed in Python 3 using Tensorflow, Keras and the Udaci
     1. Generator creation
     1. Flexible model definition
 1. Selecting the model architecture and hyperparameters
-    1. Basic structure of the model
     1. Considered model variations
     1. Hyperparameter tuning
 1. Evaluating the model bahavior
@@ -323,7 +322,7 @@ class ModelParameters:
         self.regularizer = regularizer
 ```
 
-The following parameters define a model with 5 convolutional layers and 4 fully connected layers that was suggested by the Udacity Self-Driving Car Engineer class. The 5 convolutional layers work well with an image of the size 320x65 pixels. The 4 fully connected layers are capable of reducing 2112 features to a single steering angle as output. The model size is large enough to accomodate L2 regularization in the convolutional layers and 50 percent dropout in the first 3 fully connected layers.
+The following parameters define a model in the variable `sMP` that has 5 convolutional layers and 4 fully connected layers. This layout follows what was suggested during the Udacity Self-Driving Car Engineer class following a model used by the NVIDIA autonomous vehicle group. The 5 convolutional layers are capable of detecting the most important features in an image of the size 320x65 pixels. The 4 fully connected layers are capable of reducing 2112 features to a single steering angle as output. The model size is large enough to accomodate L2 regularization in the convolutional layers and 50 percent dropout in the first 3 fully connected layers.
 
 ```python
 # define constants
@@ -347,9 +346,11 @@ sMPs.append(ModelParameters(conv_layers = conv_layers.copy(), full_layers = full
                             regularizer = regularizers.l2(0.01)))
 ```
 
-The function `train_model` is used to create and train a model.
+The function `train_model` is used to create and train a model. The model definition is passed to this function via the previously described variable `sMP`. First it defines a new `Sequential()` *Keras* model. In the next step it crops the top and bottom from the image as described before. Using the *Keras* layer `Cropping2D` as part of the model ensures that the same cropping occurs if the model is later used to predict the steering angle. After this the input is normalized in a *Keras* `Lambda` layer from values between 0 and 255 to values between -0.5 and 0.5. The next two steps create the convolutional layers and then add a flatten layer before creating all the fully connected layers.
 
-TEXT
+The layout of the model is plotted to an image file via the `plot_model` function from `keras.utils`.
+
+The model is created by selecting the `mse` (mean square error) loss function and an `adam` optimizer for training. The actual training happens in the `fit_generator` function. It takes the training dataset from the generator `train_generator` and the validation dataset from the generator `valid_generator` that have been defined before. The number of epochs `epochs` is also passed to this function. The final model is then saved to a file.
 
 ```python
 def train_model(itername, train_generator, train_size, valid_generator, valid_size, display_generator, display_size, \
@@ -417,7 +418,7 @@ def train_model(itername, train_generator, train_size, valid_generator, valid_si
     model.save((modelfilename + '_' + itername + modelfileext))
 ```
 
-The exact layer sizes and number of parameters are calculated by Keras as follows. In addition, the below visual representation was created using the `plot_model` function from `keras.utils`.
+The exact layer sizes and number of parameters for the above example are calculated by *Keras* via the model object method `summary()` as follows.
 
 ```
 _________________________________________________________________
@@ -459,8 +460,15 @@ Non-trainable params: 0
 _________________________________________________________________
 ```
 
-<img src="docu_images/03_01_model_c5_d4_wd.png" width="30%">
+## 4. Selecting the model architecture and hyperparameters
 
+### 1. Considered model variations
+
+<img src="docu_images/03_01_model_c2_d3_nd.png" width="30%"> <img src="docu_images/03_02_model_c2_d3_wd.png" width="30%"> <img src="docu_images/03_03_model_c5_d4_nd.png" width="30%"> <img src="docu_images/03_04_model_c5_d4_wd.png" width="30%">
+
+### 2. Hyperparameter tuning
+
+```
 subfolder = '../../GD_GitHubData/behavioral-cloning-data'
 yimagerange = [70, 135]
 max_train_size = 9999999999 # 256
@@ -476,15 +484,8 @@ modellayoutpicfilename = 'model'
 modellayoutpicfileext = '.png'
 bdisplay = True
 bdebug = False
+```
 
-
-## 4. Selecting the model architecture and hyperparameters
-
-### 1. Basic structure of the model
-
-### 2. Considered model variations
-
-### 3. Hyperparameter tuning
 
 ## 5. Evaluating the model bahavior
 
