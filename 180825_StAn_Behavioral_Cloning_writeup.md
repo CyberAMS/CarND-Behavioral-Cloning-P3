@@ -95,7 +95,7 @@ We need to train the model to steer away from the track boundary if the car gets
 
 As the measurements are recorded in a *\*.csv* format I conveniently used *Microsoft Excel* to mark the rows that contain valid recovery situations during the weaving events. A valid recovery situation is determined as being part of the first third of an event when the steering wheel clearly changes from left to right steering or the other way round. The second third would be considered crossing the center line and the last third would be considered steering towards the closest boundary. Here are examples for first, second and last third images of a single event as decribed before along with their steering angles.
 
-<img src="docu_images/02_01_center_2018_08_18_06_36_35_877.jpg" width="30%"> <img src="02_02_center_2018_08_18_06_36_37_839.jpg" width="30%"> <img src="docu_images/02_03_center_2018_08_18_06_36_39_145.jpg" width="30%">
+<img src="docu_images/02_01_center_2018_08_18_06_36_35_877.jpg" width="30%"> <img src="docu_images/02_02_center_2018_08_18_06_36_37_839.jpg" width="30%"> <img src="docu_images/02_03_center_2018_08_18_06_36_39_145.jpg" width="30%">
 
 ```
 first third: steering_angle = 0.2406015
