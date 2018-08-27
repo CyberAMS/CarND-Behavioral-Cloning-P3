@@ -10,18 +10,19 @@ The following table shows an overview of the most important files:
 
 | File                                          | Description                                                             |
 |-----------------------------------------------|-------------------------------------------------------------------------|
-| 180825_StAn_Behavioral_Cloning_writeup.md     | This file (instead of README)                                           |
+| writeup_report.md                             | This file (same as 180825_StAn_Behavioral_Cloning_writeup.md)           |
 | model.py                                      | Python code for the Keras model (same as behavioral_cloning4.py)        |
+| model.h5                                      | Keras model for final submission (same as model_inf_005_wm_c5_d4_wd.h5) |
+| drive.py                                      | Drive file for final submission (same as drive20.py)                    |
+| video.mp4                                     | Video for final submission (same as IMAGES_20_inf_005_wm_c5_d4_wd.mp4)  |
+| 180825_StAn_Behavioral_Cloning_writeup.md     | Project documentation (instead of README)                               |
 | behavioral_cloning4.py                        | All scripts necessary to create the Keras model                         |
 | 180823_StAn_CarND-Behavioral-Cloning-P3.ipynb | Jupyter notebook for executing behavioral_cloning4.py                   |
-| model.h5                                      | Keras model for final submission (same as model_inf_005_wm_c5_d4_wd.h5) |
 | model_inf_005_wm_c5_d4_wd.h5                  | Keras model using all training data and soft steeroffset = 0.05         |
 | model_inf_020_wm_c5_d4_wd.h5                  | Keras model using all training data and aggressive steeroffset = 0.2    |
-| drive.py                                      | Drive file for final submission (same as drive20.py)                    |
 | drive20.py                                    | Python script to connect to simulator and drive with speed = 20         |
 | drive9.py                                     | Python script to connect to simulator and drive with speed = 9          |
 | video.py                                      | Python script to create video (unchanged)                               |
-| video.mp4                                     | Video for final submission (same as IMAGES_20_inf_005_wm_c5_d4_wd.mp4)  |
 | IMAGES_20_inf_005_wm_c5_d4_wd.mp4             | Video with speed = 20 and soft steeroffset = 0.05                       |
 | IMAGES_20_inf_020_wm_c5_d4_wd.mp4             | Video with speed = 20 and aggressive steeroffset = 0.2                  |
 | IMAGES_9_inf_005_wm_c5_d4_wd.mp4              | Video with speed = 9 and soft steeroffset = 0.05                        |
