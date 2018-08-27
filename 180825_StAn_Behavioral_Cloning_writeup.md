@@ -10,7 +10,8 @@ The following table shows an overview of the most important files:
 
 | File                                          | Description                                                             |
 |-----------------------------------------------|-------------------------------------------------------------------------|
-| 180825_StAn_Behavioral_Cloning_writeup.md     | This file                                                               |
+| 180825_StAn_Behavioral_Cloning_writeup.md     | This file (instead of README)                                           |
+| model.py                                      | Python code for the Keras model (same as behavioral_cloning4.py)        |
 | behavioral_cloning4.py                        | All scripts necessary to create the Keras model                         |
 | 180823_StAn_CarND-Behavioral-Cloning-P3.ipynb | Jupyter notebook for executing behavioral_cloning4.py                   |
 | model.h5                                      | Keras model for final submission (same as model_inf_005_wm_c5_d4_wd.h5) |
@@ -19,7 +20,7 @@ The following table shows an overview of the most important files:
 | drive.py                                      | Drive file for final submission (same as drive20.py)                    |
 | drive20.py                                    | Python script to connect to simulator and drive with speed = 20         |
 | drive9.py                                     | Python script to connect to simulator and drive with speed = 9          |
-| videp.py                                      | Python script to create video (unchanged)                               |
+| video.py                                      | Python script to create video (unchanged)                               |
 | video.mp4                                     | Video for final submission (same as IMAGES_20_inf_005_wm_c5_d4_wd.mp4)  |
 | IMAGES_20_inf_005_wm_c5_d4_wd.mp4             | Video with speed = 20 and soft steeroffset = 0.05                       |
 | IMAGES_20_inf_020_wm_c5_d4_wd.mp4             | Video with speed = 20 and aggressive steeroffset = 0.2                  |
@@ -130,13 +131,13 @@ The following table shows the columns of the *\*.csv* file and the values that t
 |------------|----------|----------|----------|----------|
 | 6 | \<steering angle\> | \<throttle\> | \<braking\> | \<speed\> |
 
-The next table shows the formulas I used to mark the valid recovery situations starting in row 6. Row 1 to 5 cannot contain valid situations. Column I is used to identify whether the new steering angle is part of a recovery (1 if yes and 0 if not) from the right (steering angle larger than the average of the last 5 events or steering angle negative) or the left (steering angle smaller than the average of the last 5 events or steering angle positive) side. Column J increases the counter for how many steps the most recent recovery already took by 1 if a recovery takes place - counting from the end to the beginning. Column K divides column J by 3 and is used by column L to count down by 1 step each row. Column M uses this information to return 1 if the current row is part of the first third of the latest recovery event and 0 otherwise.
+The next table shows the formulas I used to mark the valid recovery situations starting in row 6. Rows 1 to 5 cannot contain valid situations. Column I is used to identify whether the new steering angle is part of a recovery (1 if yes and 0 if not) from the right (steering angle larger than the average of the last 5 events or steering angle negative) or the left (steering angle smaller than the average of the last 5 events or steering angle positive) side. Column J increases the counter for how many steps the most recent recovery already took by 1 if a recovery takes place - counting from the end to the beginning. Column K divides column J by 3 and is used by column L to count down by 1 step each row. Column M uses this information to return 1 if the current row is part of the first third of the latest recovery event and 0 otherwise.
 
 | Row number | Column I | Column J | Column K | Column L | Column M |
 |------------|----------|----------|----------|----------|----------|
 | 6 | =IF(OR(AND(D6>=AVERAGE(D1:D5),D6<0),AND(D6<=AVERAGE(D1:D5),D6>0)),1,0) | =IF(I6=0,0,J7+I6) | =IF(J6=0,0,J6/3) | =IF(K6=0,0,IF(AND(K5=0,K6>0),K6,L5-1)) | =IF(L6>=1,1,0) |
 
-Columns H to L are deleted before exporting the *Microsoft Excel* file to a *\*.csv'* file. Column M stays and is read as variable `btake` for each center, left and right view image.
+Columns H to L are deleted before exporting the *Microsoft Excel* file to a *\*.csv* file. Column M stays and is read as variable `btake` for each center, left and right view image.
 
 ### 3. Augmentation of behavioral training data
 
@@ -481,7 +482,7 @@ _________________________________________________________________
 
 The previously described model configuration `c5_d4_wd` worked very well right from the beginning. In order to understand why this is the case and whether there is a simpler version, I defined 3 more configurations that eliminated some of its characteristics step by step. The model configuration `c5_d4_nd` is very similar, but has no dropout layers in the fully connected section of the model. The model configuration `c2_d3_wd` only uses 2 convolutional layers. And the model configuration `c2_d3_nd` only uses 2 convolutional layers and has no dropout layers in the fully connected section of the model.
 
-```
+```python
 # define parameters for configuration 1
 iternames.append('c5_d4_nd')
 conv_layers = []
@@ -557,11 +558,11 @@ The batch size `batch_size` has been set to 32. Values significantly above 256 w
 
 The dropout amount was varied between 0 and 0.5 by selecting the different model configurations. The effect is described further below.
 
-The L2 regularization parameter was left at the default value of 0.01 which seemed to work well with previous convolutional neural network models before.
+The L2 regularization parameter was left at the default value of 0.01 which seemed to work well with convolutional neural network models that I worked with before.
 
 ## 5. Evaluating the model bahavior
 
-The behavior of the model can be evaluated with the *simulator* in *Autonomous Mode*. The first command needs to be executed to connect and then run the *simulator* with the model. The second command takes the recorded images and creates a video.
+The behavior of the model can be evaluated with the *simulator* in *Autonomous Mode*. The first command below needs to be executed to connect and then run the *simulator* with the model. The second command below takes the recorded images and creates a video.
 
 ```
 python drive.py model.h5 IMAGES
@@ -647,7 +648,7 @@ Configuration `20_inf_005_nm_c5_d4_wd` is oscillating extremely from boundary to
 
 ![alt text][image5]
 
-All the other unsafe configurations are facing on of the following deficiencies:
+All the other unsafe configurations are facing one of the following deficiencies:
 
 | Deficiency | Issue |
 |------------|-------|
